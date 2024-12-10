@@ -40,7 +40,54 @@ export interface CallDetails {
   };
 }
 
-export interface WebSocketMessage {
-  type: 'register' | 'call' | 'error';
-  data?: any;
-}
+
+
+export type SetupMessage = {
+  type: 'setup';
+  sessionId: string;
+  callSid: string;
+  parentCallSid: string;
+  from: string;
+  to: string;
+  forwardedFrom: string;
+  callerName: string;
+  direction: string;
+  callType: string;
+  callStatus: string;
+  accountSid: string;
+  applicationSid: string;
+};
+
+export type PromptMessage = {
+  type: 'prompt';
+  voicePrompt: string;
+};
+
+export type InterruptMessage = {
+  type: 'interrupt';
+  utteranceUntilInterrupt: string;
+  durationUntilInterruptMs: string;
+};
+
+export type TextMessage = {
+  type: 'text';
+  token: string;
+  last: string;
+};
+
+export type EndMessage = {
+  type: 'end';
+  handoffData: string;
+};
+
+export type ErrorMessage = {
+  type: 'error';
+};
+
+export type ConversationRelayMessage =
+  | SetupMessage
+  | PromptMessage
+  | InterruptMessage
+  | EndMessage
+  | ErrorMessage
+  | TextMessage;
