@@ -1,10 +1,10 @@
 import OpenAI from "openai";
 import { ChatCompletionCreateParams } from "openai/resources/chat/completions";
-import { Stream } from "openai/streaming";
-import {
-  ChatCompletionChunk,
-  ChatCompletionMessage,
-} from "openai/resources/chat/completions";
+// import { Stream } from "openai/streaming";
+// import {
+//   ChatCompletionChunk,
+//   ChatCompletionMessage,
+// } from "openai/resources/chat/completions";
 import { systemPrompt } from "../../prompts/systemPrompt";
 import { EventEmitter } from "events";
 import {
@@ -136,7 +136,6 @@ export class LLMService extends EventEmitter {
         ...options,
       });
 
-      let message = {} as ChatCompletionMessage;
       const toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] =
         [];
       for await (const chunk of stream) {
@@ -222,6 +221,10 @@ export class LLMService extends EventEmitter {
     }
   }
 
+  async setup(message: any) {
+   // Handle setup message
+  }
+
   async executeToolCall(
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
   ): Promise<string> {
@@ -247,7 +250,7 @@ export class LLMService extends EventEmitter {
       const result = await toolFunction(JSON.parse(args));
 
       if (name === "human_agent_handoff") {
-        this.emit("toolCall:humanAgentHandoff", JSON.parse(args));
+        this.emit("humanAgentHandoff", JSON.parse(args));
       }
 
       return result;

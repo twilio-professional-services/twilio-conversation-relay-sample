@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 
 import callRoutes from "./routes/callRoutes";
 import connectActionRoutes from "./routes/connectActionRoutes";
-import { setupWebSocketHandlers } from "./services/llm/websocketService";
+import { initializeWebSocketHandlers } from "./services/llm/websocketService";
 
 dotenv.config();
 
@@ -28,7 +28,7 @@ const server = http.createServer(app);
 
 // WebSocket Server
 const wss = new WebSocketServer({ server });
-setupWebSocketHandlers(wss);
+initializeWebSocketHandlers(wss);
 
 // Start server
 server.listen(port, () => {

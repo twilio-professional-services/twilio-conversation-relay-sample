@@ -1,8 +1,10 @@
-# Twilio Conversation Relay
+# Twilio ConversationRelay
 
 ## Overview
 
-A Twilio Conversation Relay project for building a Voice AI Assistant.
+A Twilio ConversationRelay project for building a Voice AI Assistant.
+
+![ConversationRelay](docs/conversation-relay.png)
 
 ## Features
 
