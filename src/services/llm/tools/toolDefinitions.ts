@@ -106,31 +106,31 @@ export const toolDefinitions : LLMToolDefinition[] = [
         },
       },
     },
-    {
-      type: 'function',
-      function: {
-        name: 'check_payment_options',
-        description: 'Check the payment options available to the user',
-        parameters: {
-          type: 'object',
-          properties: {
-            userId: {
-              type: 'string',
-              description: 'The user ID. Note: This is verified user id from the verify_user_identity function',
-            },
-            hsaAccountBalance: {
-              type: 'number',
-              description: 'The balance of the user\'s Health Savings Account (HSA). Note: This is verified by the check_hsa_account function',
-            },
-            balance: {
-              type: 'number',
-              description: 'The total amount of the balance on a pending medical bill. Note: This is verified by the check_pending_bill function',
-            },
-          },
-          required: ['userId', 'hsaAccountBalance', 'balance'],
-        },
-      },
-    },
+    // {
+    //   type: 'function',
+    //   function: {
+    //     name: 'check_payment_options',
+    //     description: 'Check the payment options available to the user',
+    //     parameters: {
+    //       type: 'object',
+    //       properties: {
+    //         userId: {
+    //           type: 'string',
+    //           description: 'The user ID. Note: This is verified user id from the verify_user_identity function',
+    //         },
+    //         hsaAccountBalance: {
+    //           type: 'number',
+    //           description: 'The balance of the user\'s Health Savings Account (HSA). Note: This is verified by the check_hsa_account function',
+    //         },
+    //         balance: {
+    //           type: 'number',
+    //           description: 'The total amount of the balance on a pending medical bill. Note: This is verified by the check_pending_bill function',
+    //         },
+    //       },
+    //       required: ['userId', 'hsaAccountBalance', 'balance'],
+    //     },
+    //   },
+    // },
     {
       type: 'function',
       function: {

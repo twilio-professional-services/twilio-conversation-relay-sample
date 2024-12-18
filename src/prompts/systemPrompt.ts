@@ -38,9 +38,8 @@ export const systemPrompt = `## Objective
     - Required data includes the user's identification number (ID).
 
   ### Check Payment options:
-    - First check if an HSA account exists for the user before proceeding with this function.
+    - First check if an HSA account exists for the user.
     - This function should ONLY be called after the user has been verified
-    - This function should be called to check the payment options available to the user.
     - Required data includes the user's identification number (ID).
   
   ### Search Common Medical Terms:

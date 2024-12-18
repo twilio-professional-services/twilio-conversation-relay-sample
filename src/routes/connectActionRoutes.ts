@@ -5,9 +5,9 @@ const router = express.Router();
 
 router.post('/action', async (req: Request, res: Response) => {
   try {
-    await handleConnectAction(req.body);
+    const response = await handleConnectAction(req.body);
     res.type('text/xml');
-    res.status(200).send();
+    res.status(200).send(response);
   } catch (error) {
     res.status(500).json({ error: 'Failed to process connect action' });
   }
