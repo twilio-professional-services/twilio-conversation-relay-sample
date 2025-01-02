@@ -138,14 +138,19 @@ export class LLMService extends EventEmitter {
 
       const toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] =
         [];
+
+      let llmResponse = "";
       for await (const chunk of stream) {
         let content = chunk.choices[0]?.delta?.content || "";
         let deltas = chunk.choices[0].delta;
         let finishReason = chunk.choices[0].finish_reason;
 
+        llmResponse = llmResponse + content;
+
         console.log("chunk", content, finishReason, deltas);
 
         if (finishReason === "stop") {
+          this.messages.push({ role: "assistant", content: llmResponse });
           this.emit("streamChatCompletion:complete", content);
           return;
         } else {
