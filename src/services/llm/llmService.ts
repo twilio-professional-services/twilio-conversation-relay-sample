@@ -16,6 +16,7 @@ import {
   LLMToolDefinition,
   checkHsaAccount,
   checkPaymentOptions,
+  switchLanguage,
 } from "./tools";
 
 export class LLMService extends EventEmitter {
@@ -246,6 +247,7 @@ export class LLMService extends EventEmitter {
         human_agent_handoff: humanAgentHandoff,
         check_hsa_account: checkHsaAccount,
         check_payment_options: checkPaymentOptions,
+        switch_language: switchLanguage,
       }[name];
 
       if (!toolFunction) {
@@ -256,6 +258,8 @@ export class LLMService extends EventEmitter {
 
       if (name === "human_agent_handoff") {
         this.emit("humanAgentHandoff", JSON.parse(args));
+      } else if (name === "switch_language") {
+        this.emit("switchLanguage", JSON.parse(args));
       }
 
       return result;

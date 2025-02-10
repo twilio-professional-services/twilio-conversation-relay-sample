@@ -33,6 +33,23 @@ export const toolDefinitions : LLMToolDefinition[] = [
     {
       type: 'function',
       function: {
+        name: 'switch_language',
+        description: 'Switch the language of the conversation',
+        parameters: {
+          type: 'object',
+          properties: {
+            targetLanguage: {
+              type: 'string',
+              description: 'The target language to switch to. SHOULD BE ONE OF THE FOLLOWING: ["english","spanish"]',
+            },
+          },
+          required: ['targetLanguage'],
+        },
+      },
+    },
+    {
+      type: 'function',
+      function: {
         name: 'verify_user_identity',
         description: 'Verify the identity of a user',
         parameters: {

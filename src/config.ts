@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { languageOptions } from "./languageOptions";
 
 // Load environment variables
 dotenv.config();
@@ -61,7 +62,8 @@ export const config = {
   },
   server: {
     port: parseInt(parsedConfig.PORT || '3000', 10)
-  }
+  },
+  languages: languageOptions,
 };
 
 // Utility function to mask sensitive information

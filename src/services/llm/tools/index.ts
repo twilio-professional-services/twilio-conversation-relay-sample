@@ -6,3 +6,4 @@ export * from './searchCommonMedicalTerms';
 export * from './humanAgentHandoff';
 export * from './checkHsaAccount';
 export * from './checkPaymentOptions';
+export * from './switchLanguage';

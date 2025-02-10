@@ -84,10 +84,22 @@ export type ErrorMessage = {
   type: 'error';
 };
 
+export type DtmfMessage = {
+  type: 'dtmf',
+  digit: string;
+}
+
+export type LanguageMessage = {
+type: 'language';
+ttsLanguage: string;
+transcriptionLanguage: string;
+}
+
 export type ConversationRelayMessage =
   | SetupMessage
   | PromptMessage
   | InterruptMessage
   | EndMessage
   | ErrorMessage
-  | TextMessage;
+  | TextMessage
+  | DtmfMessage;

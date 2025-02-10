@@ -1,6 +1,8 @@
 import { WebSocketServer, WebSocket } from "ws";
 import LLMService from "./llmService";
 import { ConversationRelayMessage } from "../../types";
+import {config} from "../../config";
+import { DTMFHelper } from "./dtmfHelper";
 
 
 export function initializeWebSocketHandlers(wss: WebSocketServer) {
@@ -8,6 +10,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
     console.log("New WebSocket connection");
 
     const llmService = new LLMService();
+    const dtmfHelper = new DTMFHelper();
 
     ws.on("message", (message: string) => {
       try {
@@ -28,6 +31,13 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
           case "interrupt":
             llmService.userInterrupted = true;
             break;
+          case "dtmf":
+              console.log("DTMF Message", parsedMessage);
+              const processedDTMF = dtmfHelper.processDTMF(parsedMessage.digit);
+              llmService.streamChatCompletion([
+                { role: "system", content: processedDTMF },
+              ]);
+              break;
           default:
             console.warn(`Unknown message type: ${parsedMessage.type}`);
         }
@@ -82,6 +92,23 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
       ws.send(JSON.stringify(endMessage));
     });
 
+    llmService.on("switchLanguage", (message: any) => {
+
+      const languageCode = config.languages[message.targetLanguage]?.locale_code;
+      if (!languageCode) {
+        console.info("Language not supported");
+        return;
+      }
+
+      const languageMessage = { 
+        type: "language",
+        ttsLanguage: languageCode,
+        transcriptionLanguage: languageCode
+      }
+
+      console.log("Switch Language", languageMessage);
+      ws.send(JSON.stringify(languageMessage))
+    });
   });
 }
 
