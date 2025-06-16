@@ -1,5 +1,8 @@
 # Twilio ConversationRelay
 
+## Disclaimer
+This software is to be considered "sample code", a Type B Deliverable, and is delivered "as-is" to the user. Twilio bears no responsibility to support the use or implementation of this software.
+
 ## Overview
 
 A Twilio ConversationRelay project for building a Voice AI Assistant.
