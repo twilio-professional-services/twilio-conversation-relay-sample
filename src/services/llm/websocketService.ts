@@ -3,6 +3,7 @@ import LLMService from "./llmService";
 import { ConversationRelayMessage } from "../../types";
 import { config } from "../../config";
 import { DTMFHelper } from "./dtmfHelper";
+import { IdleTimer } from "./idleTimer";
 
 export function initializeWebSocketHandlers(wss: WebSocketServer) {
   wss.on("connection", (ws: WebSocket) => {
@@ -10,6 +11,18 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
 
     const llmService = new LLMService();
     const dtmfHelper = new DTMFHelper();
+    const idleTimer = new IdleTimer(10000, dtmfHelper); // 10 seconds timeout
+
+    idleTimer.on("idleTimeout", (data) => {
+      console.log("Idle timer expired. Resetting state.");
+      llmService.streamChatCompletion([
+        {
+          role: "user",
+          content: "dtmf input was not received. please reprompt the user.",
+        },
+      ]);
+      dtmfHelper.resetState(); // Reset DTMF state
+    });
 
     ws.on("message", (message: string) => {
       try {
@@ -33,6 +46,9 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
           case "dtmf":
             console.log("DTMF Message", parsedMessage);
             const processedDTMF = dtmfHelper.processDTMF(parsedMessage.digit);
+
+            // Reset idle timer on receiving a new DTMF message
+            idleTimer.start();
 
             // Only call streamChatCompletion if the collection is completed
             if (dtmfHelper["isCollectionComplete"] === true) {
@@ -58,6 +74,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
 
     ws.on("close", () => {
       console.log("WebSocket connection closed");
+      idleTimer.clear(); // Clear timer on connection close
     });
 
     llmService.on("chatCompletion:complete", (message: any) => {
@@ -100,6 +117,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
     llmService.on("dtmfInput", (state: string) => {
       console.log("dtmf input field:", state);
       dtmfHelper.setState(state); // Set the new state
+      idleTimer.start(); // Start idle timer when expecting DTMF input
     });
 
     llmService.on("switchLanguage", (message: any) => {
