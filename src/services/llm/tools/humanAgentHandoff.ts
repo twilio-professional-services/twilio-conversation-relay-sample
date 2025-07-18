@@ -1,6 +1,12 @@
 export interface HumanAgentHandoffParams {
   reason: string;
   context: string;
+  summary: string;
+  userInfo?: {
+    firstName: string;
+    lastName: string;
+    DOB: string; // Format: YYYY-MM-DD
+  };
 }
 
 export async function humanAgentHandoff(params: HumanAgentHandoffParams): Promise<string> {

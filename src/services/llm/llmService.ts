@@ -17,6 +17,7 @@ import {
   checkHsaAccount,
   checkPaymentOptions,
   switchLanguage,
+  collectPhoneNumber,
 } from "./tools";
 
 export class LLMService extends EventEmitter {
@@ -228,7 +229,7 @@ export class LLMService extends EventEmitter {
   }
 
   async setup(message: any) {
-   // Handle setup message
+    // Handle setup message
   }
 
   async executeToolCall(
@@ -242,6 +243,7 @@ export class LLMService extends EventEmitter {
       // update the toolFunction to use the toolDefinitions
       const toolFunction = {
         verify_user_identity: verifyUser,
+        collect_phone_number: collectPhoneNumber,
         check_pending_bill: checkPendingBill,
         search_common_medical_terms: searchCommonMedicalTerms,
         human_agent_handoff: humanAgentHandoff,
@@ -260,6 +262,9 @@ export class LLMService extends EventEmitter {
         this.emit("humanAgentHandoff", JSON.parse(args));
       } else if (name === "switch_language") {
         this.emit("switchLanguage", JSON.parse(args));
+      }
+      if (name === "collect_phone_number") {
+        this.emit("dtmfInput", "phoneNumber");
       }
 
       return result;

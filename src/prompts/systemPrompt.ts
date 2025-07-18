@@ -27,6 +27,11 @@ export const systemPrompt = `## Objective
   ### Verify User:
     - This function should only run as a single tool call, never with other tools
     - Required data includes the user's first and last name and date of birth (DOB).
+
+  ### Collect Phone Number:
+    - This function should only run as a single tool call, never with other tools
+    - This function should be called to collect the user's phone number.
+    - Required data includes the user's phone number.
   
   ### Check Pending Bill:
     - This function should only run as a single tool call, never with other tools

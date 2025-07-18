@@ -38,6 +38,8 @@ export interface CallDetails {
     code: string | null;
     results: Record<string, unknown>;
   };
+
+  FlowSid?: string;         // Flow identifier
 }
 
 

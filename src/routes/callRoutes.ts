@@ -5,7 +5,10 @@ const router = express.Router();
 
 router.post('/incoming-call', async (req: Request, res: Response) => {
   try {
-    const callDetails = await handleIncomingCall(req.body);
+
+    const query = {
+      ...req.query};
+    let callDetails = await handleIncomingCall({...query, ...req.body});
     res.type('text/xml');
     console.log('Incoming call', callDetails);
     res.status(200).send(callDetails);

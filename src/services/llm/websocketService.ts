@@ -1,9 +1,8 @@
 import { WebSocketServer, WebSocket } from "ws";
 import LLMService from "./llmService";
 import { ConversationRelayMessage } from "../../types";
-import {config} from "../../config";
+import { config } from "../../config";
 import { DTMFHelper } from "./dtmfHelper";
-
 
 export function initializeWebSocketHandlers(wss: WebSocketServer) {
   wss.on("connection", (ws: WebSocket) => {
@@ -32,12 +31,17 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
             llmService.userInterrupted = true;
             break;
           case "dtmf":
-              console.log("DTMF Message", parsedMessage);
-              const processedDTMF = dtmfHelper.processDTMF(parsedMessage.digit);
+            console.log("DTMF Message", parsedMessage);
+            const processedDTMF = dtmfHelper.processDTMF(parsedMessage.digit);
+
+            // Only call streamChatCompletion if the collection is completed
+            if (dtmfHelper["isCollectionComplete"] === true) {
               llmService.streamChatCompletion([
                 { role: "system", content: processedDTMF },
               ]);
-              break;
+              dtmfHelper.resetState(); // Reset state after completion
+            }
+            break;
           default:
             console.warn(`Unknown message type: ${parsedMessage.type}`);
         }
@@ -84,6 +88,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
     });
 
     llmService.on("humanAgentHandoff", (message: any) => {
+      console.log("Human Agent Handoff", message);
       const endMessage = {
         type: "end",
         handoffData: JSON.stringify(message), // important to stringify the object
@@ -92,23 +97,27 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
       ws.send(JSON.stringify(endMessage));
     });
 
-    llmService.on("switchLanguage", (message: any) => {
+    llmService.on("dtmfInput", (state: string) => {
+      console.log("dtmf input field:", state);
+      dtmfHelper.setState(state); // Set the new state
+    });
 
-      const languageCode = config.languages[message.targetLanguage]?.locale_code;
+    llmService.on("switchLanguage", (message: any) => {
+      const languageCode =
+        config.languages[message.targetLanguage]?.locale_code;
       if (!languageCode) {
         console.info("Language not supported");
         return;
       }
 
-      const languageMessage = { 
+      const languageMessage = {
         type: "language",
         ttsLanguage: languageCode,
-        transcriptionLanguage: languageCode
-      }
+        transcriptionLanguage: languageCode,
+      };
 
       console.log("Switch Language", languageMessage);
-      ws.send(JSON.stringify(languageMessage))
+      ws.send(JSON.stringify(languageMessage));
     });
   });
 }
-
