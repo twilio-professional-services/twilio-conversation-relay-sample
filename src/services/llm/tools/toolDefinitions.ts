@@ -171,4 +171,24 @@ export const toolDefinitions: LLMToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "search_knowledge_base",
+      description:
+        "Retrieve relevant documents from the knowledge base. Queries about business hours and parking information can be answered using this tool.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "The query text" },
+          num_results: {
+            type: "number",
+            description: "Number of results to retrieve",
+            default: 3,
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
 ];

@@ -10,7 +10,6 @@ import { EventEmitter } from "events";
 import {
   verifyUser,
   checkPendingBill,
-  searchCommonMedicalTerms,
   humanAgentHandoff,
   toolDefinitions,
   LLMToolDefinition,
@@ -18,6 +17,7 @@ import {
   checkPaymentOptions,
   switchLanguage,
   collectPhoneNumber,
+  searchKnowledgeBase,
 } from "./tools";
 import { StateManager, LLMServiceState } from "./stateManager";
 
@@ -303,7 +303,7 @@ export class LLMService extends EventEmitter {
         verify_user_identity: verifyUser,
         collect_phone_number: collectPhoneNumber,
         check_pending_bill: checkPendingBill,
-        search_common_medical_terms: searchCommonMedicalTerms,
+        search_knowledge_base: searchKnowledgeBase,
         human_agent_handoff: humanAgentHandoff,
         check_hsa_account: checkHsaAccount,
         check_payment_options: checkPaymentOptions,
