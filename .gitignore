@@ -6,3 +6,4 @@ dist/
 coverage/
 vector_db/
 documents/
+chroma/

@@ -13,7 +13,6 @@ let knowledgeCollection: Chroma | null = null;
 
 // Ensure environment variables are used for collection name and path
 const COLLECTION_NAME = process.env.CHROMA_COLLECTION_NAME || "knowledge_base";
-// const CHROMA_DB_PATH = process.env.CHROMA_DB_PATH || "./chroma";
 
 // // Fix `openai` reference
 const openai = new OpenAI({
@@ -27,16 +26,10 @@ async function initializeChroma() {
     console.log(COLLECTION_NAME);
     knowledgeCollection = new Chroma(new OpenAIEmbeddings(), {
       collectionName: COLLECTION_NAME,
+      url: `http://localhost:8000`,
     });
 
     console.log("✓ Connected to new ChromaDB collection", knowledgeCollection);
-    // knowledgeCollection = await Chroma.fromExistingCollection(
-    //   new OpenAIEmbeddings(),
-    //   {
-    //     collectionName: COLLECTION_NAME,
-    //     // url: `http://localhost:8000`,
-    //   }
-    // );
 
     console.log("✓ Connected to existing ChromaDB collection");
   } catch (error) {
