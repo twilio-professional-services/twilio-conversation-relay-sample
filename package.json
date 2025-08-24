@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Twilio Conversation Relay sample with Express and WebSocket",
   "main": "dist/server.js",
-  "type": "module",
   "scripts": {
     "start": "node dist/server.js",
     "build": "tsc",

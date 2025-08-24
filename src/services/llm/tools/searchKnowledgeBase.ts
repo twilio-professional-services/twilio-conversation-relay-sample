@@ -20,17 +20,23 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Initialize ChromaDB collection with persistence
+// // Initialize ChromaDB collection with persistence
 async function initializeChroma() {
   try {
     // Initialize Chroma with LangChain
-    knowledgeCollection = await Chroma.fromExistingCollection(
-      new OpenAIEmbeddings(),
-      {
-        collectionName: COLLECTION_NAME,
-        url: `http://localhost:8000`,
-      }
-    );
+    console.log(COLLECTION_NAME);
+    knowledgeCollection = new Chroma(new OpenAIEmbeddings(), {
+      collectionName: COLLECTION_NAME,
+    });
+
+    console.log("✓ Connected to new ChromaDB collection", knowledgeCollection);
+    // knowledgeCollection = await Chroma.fromExistingCollection(
+    //   new OpenAIEmbeddings(),
+    //   {
+    //     collectionName: COLLECTION_NAME,
+    //     // url: `http://localhost:8000`,
+    //   }
+    // );
 
     console.log("✓ Connected to existing ChromaDB collection");
   } catch (error) {
@@ -41,7 +47,7 @@ async function initializeChroma() {
 initializeChroma();
 
 export async function searchKnowledgeBase(params: any): Promise<any[]> {
-  // Auto-initialize if not connected
+  //  Auto-initialize if not connected
   if (!knowledgeCollection) {
     console.log("ChromaDB not initialized, initializing with defaults...");
     await initializeChroma();
