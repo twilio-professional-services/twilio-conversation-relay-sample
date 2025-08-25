@@ -1,6 +1,7 @@
 # Twilio ConversationRelay
 
 ## Disclaimer
+
 This software is to be considered "sample code", a Type B Deliverable, and is delivered "as-is" to the user. Twilio bears no responsibility to support the use or implementation of this software.
 
 ## Overview
@@ -19,26 +20,12 @@ A Twilio ConversationRelay project for building a Voice AI Assistant.
 
 ## Prerequisites
 
-- Node.js (v16+)
+- Node.js (v20+)
 - npm
 
-## Setup
+Before using this project, please follow the setup instructions in [SETUP.md](./SETUP.md).
 
-### Open ngrok tunnel
-
-When developing & testing locally, you'll need to open an ngrok tunnel that forwards requests to your local development server.
-This ngrok tunnel is used for the Twilio ConversationRelay to send and receive data from a websocket.
-
-To spin up an ngrok tunnel, open a Terminal and run:
-
-```
-ngrok http 3000
-```
-
-Once the tunnel has been initiated, copy the `Forwarding` URL. It will look something like: `https://[your-ngrok-domain].ngrok.app`. You will
-need this when configuring environment variables for the middleware in the next section.
-
-Note that the `ngrok` command above forwards to a development server running on port `3000`, which is the default port configured in this application. If you override the `PORT` environment variable covered in the next section, you will need to update the `ngrok` command accordingly.
+## Getting Started
 
 1. Clone this repository
 
@@ -69,6 +56,29 @@ Below is an optional environment variable that has default value that can be ove
 | `PORT` | The port your local server runs on. | `3000` |
 
 5. In the Twilio Console, go to Phone Numbers > Manage > Active Numbers and select an existing phone number (or Buy a number). In your Phone Number configuration settings, update the first A call comes in dropdown to Webhook and set the URL to https://[your-ngrok-domain].ngrok.app/api/incoming-call, ensure HTTP is set to HTTP POST, and click Save configuration.
+
+### Setting Up the Knowledge Base
+
+#### Prerequisites
+
+Before populating the vector database, ensure ChromaDB is running. Follow the setup instructions in [SETUP.md](./SETUP.md).
+
+#### Populating the Vector Database
+
+1. **Prepare your documents**: supports `.txt` and `.json` files
+2. **Add documents**: Copy your knowledge base files to the `documents/` folder in the project root
+3. **Initialize the vector database**: From the repository root, run:
+   ```bash
+   npm run init-vectordb
+   ```
+
+This process will:
+
+- Read all `.txt` and `.json` files from the `documents/` folder
+- Generate embeddings for the content
+- Store the embeddings in ChromaDB for RAG-based search
+
+**Note**: Make sure ChromaDB is running before executing the initialization command.
 
 ### Run the app
 

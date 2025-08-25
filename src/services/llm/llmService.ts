@@ -10,19 +10,23 @@ import { EventEmitter } from "events";
 import {
   verifyUser,
   checkPendingBill,
-  searchCommonMedicalTerms,
   humanAgentHandoff,
   toolDefinitions,
   LLMToolDefinition,
   checkHsaAccount,
   checkPaymentOptions,
   switchLanguage,
+  collectPhoneNumber,
+  searchKnowledgeBase,
 } from "./tools";
+import { StateManager, LLMServiceState } from "./stateManager";
 
 export class LLMService extends EventEmitter {
   private openai: OpenAI;
   private messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
   private _userInterrupted: boolean | undefined;
+  private sessionId: string = "";
+  private stateManager: StateManager;
 
   public get userInterrupted(): boolean | undefined {
     return this._userInterrupted;
@@ -42,6 +46,43 @@ export class LLMService extends EventEmitter {
         role: "system",
         content: systemPrompt,
       });
+    this.stateManager = StateManager.getInstance();
+  }
+
+  public saveState(): void {
+    if (this.sessionId) {
+      const state: LLMServiceState = {
+        sessionId: this.sessionId,
+        messages: [...this.messages],
+        userInterrupted: this._userInterrupted,
+        timestamp: Date.now(),
+      };
+      this.stateManager.saveState(this.sessionId, state);
+    }
+  }
+
+  public restoreState(sessionId: string): boolean {
+    const savedState = this.stateManager.restoreState(sessionId);
+    if (savedState) {
+      this.sessionId = savedState.sessionId;
+      this.messages = [...savedState.messages];
+      this._userInterrupted = savedState.userInterrupted;
+      this.messages.push({
+        role: "system",
+        content:
+          "Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request.",
+      });
+      console.log(`State restored for session ${sessionId}`);
+      this.chatCompletion(this.messages);
+      return true;
+    }
+    return false;
+  }
+
+  public clearState(): void {
+    if (this.sessionId) {
+      this.stateManager.deleteState(this.sessionId);
+    }
   }
 
   async chatCompletion(
@@ -228,7 +269,25 @@ export class LLMService extends EventEmitter {
   }
 
   async setup(message: any) {
-   // Handle setup message
+    // Handle setup message
+    console.log("Setting up session:", message);
+
+    if (message.callSid) {
+      this.sessionId = message.callSid;
+
+      // Try to restore previous state for reconnection
+      const restored = this.restoreState(message.callSid);
+      if (!restored) {
+        // Initialize new session if no previous state found
+        console.log("No previous state found, initializing new session");
+        this.messages = [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+        ];
+      }
+    }
   }
 
   async executeToolCall(
@@ -242,8 +301,9 @@ export class LLMService extends EventEmitter {
       // update the toolFunction to use the toolDefinitions
       const toolFunction = {
         verify_user_identity: verifyUser,
+        collect_phone_number: collectPhoneNumber,
         check_pending_bill: checkPendingBill,
-        search_common_medical_terms: searchCommonMedicalTerms,
+        search_knowledge_base: searchKnowledgeBase,
         human_agent_handoff: humanAgentHandoff,
         check_hsa_account: checkHsaAccount,
         check_payment_options: checkPaymentOptions,
@@ -260,6 +320,9 @@ export class LLMService extends EventEmitter {
         this.emit("humanAgentHandoff", JSON.parse(args));
       } else if (name === "switch_language") {
         this.emit("switchLanguage", JSON.parse(args));
+      }
+      if (name === "collect_phone_number") {
+        this.emit("dtmfInput", "phoneNumber");
       }
 
       return result;
