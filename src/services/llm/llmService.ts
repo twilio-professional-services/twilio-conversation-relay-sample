@@ -1,32 +1,39 @@
-import OpenAI from "openai";
-import { ChatCompletionCreateParams } from "openai/resources/chat/completions";
-// import { Stream } from "openai/streaming";
-// import {
-//   ChatCompletionChunk,
-//   ChatCompletionMessage,
-// } from "openai/resources/chat/completions";
-import { systemPrompt } from "../../prompts/systemPrompt";
-import { EventEmitter } from "events";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import {
-  verifyUser,
-  checkPendingBill,
-  humanAgentHandoff,
-  toolDefinitions,
-  LLMToolDefinition,
-  checkHsaAccount,
-  checkPaymentOptions,
-  switchLanguage,
-  collectPhoneNumber,
-  searchKnowledgeBase,
+  BaseMessage,
+  SystemMessage,
+  HumanMessage,
+  AIMessage,
+  ToolMessage,
+} from "@langchain/core/messages";
+import { StructuredTool } from "@langchain/core/tools";
+import { RunnableConfig } from "@langchain/core/runnables";
+import { EventEmitter } from "events";
+import { systemPrompt } from "../../prompts/systemPrompt";
+import {
+  verifyUserTool,
+  checkPendingBillTool,
+  humanAgentHandoffTool,
+  checkHsaAccountTool,
+  checkPaymentOptionsTool,
+  switchLanguageTool,
+  // getCurrentWeatherTool,
+  collectPhoneNumberTool,
+  searchKnowledgeBaseTool,
 } from "./tools";
 import { StateManager, LLMServiceState } from "./stateManager";
+import { concat } from "@langchain/core/utils/stream";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import { LLMFactory, LLMConfig } from "./llmProviders";
+import { config } from "../../config";
 
 export class LLMService extends EventEmitter {
-  private openai: OpenAI;
-  private messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+  private llm: BaseChatModel;
+  private messages: BaseMessage[];
   private _userInterrupted: boolean | undefined;
   private sessionId: string = "";
   private stateManager: StateManager;
+  private tools: StructuredTool[];
 
   public get userInterrupted(): boolean | undefined {
     return this._userInterrupted;
@@ -36,24 +43,86 @@ export class LLMService extends EventEmitter {
     this._userInterrupted = value;
   }
 
-  constructor(apiKey?: string) {
+  constructor(llmConfig?: Partial<LLMConfig>) {
     super();
-    this.openai = new OpenAI({
-      apiKey: apiKey || process.env.OPENAI_API_KEY,
-    });
-    this.messages =
-      new Array<OpenAI.Chat.Completions.ChatCompletionMessageParam>({
-        role: "system",
-        content: systemPrompt,
-      });
+
+    // Create LLM configuration with fallbacks
+    const finalConfig: LLMConfig = {
+      provider: llmConfig?.provider || config.llm.provider || "openai",
+      modelName:
+        llmConfig?.modelName ||
+        config.llm.modelName ||
+        this.getDefaultModelName(
+          llmConfig?.provider || config.llm.provider || "openai"
+        ),
+      temperature: llmConfig?.temperature ?? config.llm.temperature,
+      streaming: llmConfig?.streaming ?? config.llm.streaming ?? true,
+      maxTokens: llmConfig?.maxTokens ?? config.llm.maxTokens,
+      apiKey:
+        llmConfig?.apiKey ||
+        this.getApiKeyForProvider(
+          llmConfig?.provider || config.llm.provider || "openai"
+        ),
+    };
+
+    // Initialize LLM using the factory
+    try {
+      this.llm = LLMFactory.createLLM(finalConfig);
+    } catch (error) {
+      console.error("Failed to initialize LLM:", error);
+      throw error;
+    }
+
+    this.messages = [new SystemMessage(systemPrompt)];
     this.stateManager = StateManager.getInstance();
+
+    // Initialize tools
+    this.tools = [
+      switchLanguageTool,
+      humanAgentHandoffTool,
+      // getCurrentWeatherTool,
+      collectPhoneNumberTool,
+      searchKnowledgeBaseTool,
+      checkPendingBillTool,
+      checkPaymentOptionsTool,
+      checkHsaAccountTool,
+    ];
+  }
+
+  // Method to switch LLM provider
+  public setLLM(llm: BaseChatModel): void {
+    this.llm = llm;
+  }
+
+  // Helper method to get default model name for a provider
+  private getDefaultModelName(provider: string): string {
+    switch (provider) {
+      case "openai":
+        return "gpt-3.5-turbo";
+      case "anthropic":
+        return "claude-3-sonnet-20240229";
+      default:
+        return "gpt-3.5-turbo";
+    }
+  }
+
+  // Helper method to get API key for a provider
+  private getApiKeyForProvider(provider: string): string | undefined {
+    switch (provider) {
+      case "openai":
+        return config.openai.apiKey;
+      case "anthropic":
+        return config.anthropic.apiKey;
+      default:
+        return undefined;
+    }
   }
 
   public saveState(): void {
     if (this.sessionId) {
       const state: LLMServiceState = {
         sessionId: this.sessionId,
-        messages: [...this.messages],
+        messages: this.messages.map((msg) => this.serializeMessage(msg)),
         userInterrupted: this._userInterrupted,
         timestamp: Date.now(),
       };
@@ -65,15 +134,19 @@ export class LLMService extends EventEmitter {
     const savedState = this.stateManager.restoreState(sessionId);
     if (savedState) {
       this.sessionId = savedState.sessionId;
-      this.messages = [...savedState.messages];
+      this.messages = savedState.messages.map((msg) =>
+        this.deserializeMessage(msg)
+      );
       this._userInterrupted = savedState.userInterrupted;
-      this.messages.push({
-        role: "system",
-        content:
-          "Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request.",
-      });
+
+      this.messages.push(
+        new SystemMessage(
+          "Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request."
+        )
+      );
+
       console.log(`State restored for session ${sessionId}`);
-      this.chatCompletion(this.messages);
+      this.chatCompletion([]);
       return true;
     }
     return false;
@@ -86,72 +159,72 @@ export class LLMService extends EventEmitter {
   }
 
   async chatCompletion(
-    messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-    tools?: LLMToolDefinition[],
-    options?: Partial<ChatCompletionCreateParams>
-  ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+    newMessages: BaseMessage[],
+    options?: RunnableConfig
+  ): Promise<BaseMessage> {
     try {
       // Add incoming messages to the conversation history
-      this.messages.push(...messages);
+      this.messages.push(...newMessages);
 
-      // Prepare the completion request
-      const completion = await this.openai.chat.completions.create({
-        model: options?.model || "gpt-4-turbo-preview",
-        messages: this.messages,
-        tools: tools || toolDefinitions,
-        tool_choice: tools ? "auto" : undefined,
-        ...options,
-      });
+      // Bind tools to the LLM
+      if (!this.llm) {
+        throw new Error("LLM instance is not defined.");
+      }
+      // @ts-ignore - LLM is guaranteed to be defined after the check above
+      const llmWithTools = this.llm.bindTools(this.tools);
 
-      const message = completion.choices[0]?.message;
+      // Get response from LLM
+      const response = await llmWithTools.invoke(this.messages, options);
 
-      // Check if there are tool calls that need to be executed
-      if (message?.tool_calls && message.tool_calls.length > 0) {
-        // Process tool calls
-        const toolCallResults = await Promise.all(
-          message.tool_calls.map(async (toolCall) => {
+      // Check if there are tool calls
+      if (response.tool_calls && response.tool_calls.length > 0) {
+        // Add the AI message with tool calls to history
+
+        this.messages.push(response);
+
+        // Execute tool calls
+        const toolResults = await Promise.all(
+          response.tool_calls.map(async (toolCall) => {
             try {
-              const result = await this.executeToolCall(toolCall);
-              return {
-                tool_call_id: toolCall.id,
-                role: "tool" as const,
+              const tool = this.tools.find((t) => t.name === toolCall.name);
+              if (!tool) {
+                throw new Error(`Tool ${toolCall.name} not found`);
+              }
+
+              const result = await tool.invoke(toolCall.args);
+
+              // Handle special tool events
+              this.handleToolEvents(toolCall.name, toolCall.args);
+
+              return new ToolMessage({
                 content: result,
-              };
+                tool_call_id: toolCall.id!,
+              });
             } catch (error) {
-              console.error(
-                `Tool call ${toolCall.function.name} failed:`,
-                error
-              );
-              return {
-                tool_call_id: toolCall.id,
-                role: "tool" as const,
+              console.error(`Tool call ${toolCall.name} failed:`, error);
+              return new ToolMessage({
                 content: `Error executing tool: ${
                   error instanceof Error ? error.message : "Unknown error"
                 }`,
-              };
+                tool_call_id: toolCall.id!,
+              });
             }
           })
         );
 
-        // Prepare messages for next completion
-        const newMessages = [
-          ...this.messages,
-          {
-            role: "assistant",
-            tool_calls: message.tool_calls,
-            content: null,
-          },
-          ...toolCallResults,
-        ];
+        // Add tool results to messages
+        this.messages.push(...toolResults);
 
         // Recursive call to continue completion after tool calls
-        return this.chatCompletion(newMessages, tools, options);
+        return this.chatCompletion([], options);
       }
 
       // Add the assistant's message to conversation history
-      this.messages.push(message);
-      console.log("message", message);
-      this.emit("chatCompletion:complete", message);
+      this.messages.push(response);
+      console.log("message", response);
+      this.emit("chatCompletion:complete", response);
+
+      return response;
     } catch (error) {
       this.emit("chatCompletion:error", error);
       console.error("LLM Chat Completion Error:", error);
@@ -160,107 +233,141 @@ export class LLMService extends EventEmitter {
   }
 
   async streamChatCompletion(
-    messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-    tools?: LLMToolDefinition[],
-    options?: Partial<ChatCompletionCreateParams>
-  ) {
+    newMessages: BaseMessage[],
+    options?: RunnableConfig
+  ): Promise<void> {
     try {
-      this.messages.push(...messages);
+      this.messages.push(...newMessages);
 
-      console.log("streamChatCompletion", this.messages);
+      // Bind tools to the LLM
+      if (!this.llm) {
+        throw new Error("LLM instance is not defined.");
+      }
+      // @ts-ignore - LLM is guaranteed to be defined after the check above
+      const llmWithTools = this.llm.bindTools(this.tools);
+      // .pipe(new StringOutputParser());
 
-      const stream = await this.openai.chat.completions.create({
-        stream: true,
-        model: options?.model || "gpt-3.5-turbo",
-        messages: this.messages,
-        tools: toolDefinitions, // functions as any,
-        tool_choice: tools ? "auto" : undefined,
-        ...options,
-      });
+      const stream = await llmWithTools.stream(this.messages, options);
 
-      const toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] =
-        [];
+      let accumulatedResponse = "";
+      let toolCalls: any[] = [];
+      let gathered: any = undefined;
+      let currentAIMessage: AIMessage | null = null;
 
-      let llmResponse = "";
       for await (const chunk of stream) {
-        let content = chunk.choices[0]?.delta?.content || "";
-        let deltas = chunk.choices[0].delta;
-        let finishReason = chunk.choices[0].finish_reason;
+        // Accumulate chunks to build the complete response
+        gathered = gathered !== undefined ? concat(gathered, chunk) : chunk;
 
-        llmResponse = llmResponse + content;
+        // Extract content if available and emit progress
+        let content;
 
-        console.log("chunk", content, finishReason, deltas);
+        if (chunk.content) {
+          const text =
+            typeof chunk.content === "string"
+              ? chunk.content
+              : chunk.content.map((c: any) => c.text || "").join("");
 
-        if (finishReason === "stop") {
-          this.messages.push({ role: "assistant", content: llmResponse });
-          this.emit("streamChatCompletion:complete", content);
-          return;
-        } else {
-          this.emit("streamChatCompletion:partial", content);
+          accumulatedResponse += text;
+
+          console.log(text);
+          this.emit("streamChatCompletion:partial", text);
         }
 
-        if (chunk.choices[0].delta.tool_calls) {
-          chunk.choices[0].delta.tool_calls.forEach((toolCall) => {
-            if (toolCall.id) {
-              // New tool call
-              toolCalls.push({
-                id: toolCall.id,
-                type: "function",
-                function: {
-                  name: toolCall.function?.name || "",
-                  arguments: toolCall.function?.arguments || "",
-                },
-              });
-            } else if (toolCalls.length > 0) {
-              // Continuing arguments of the last tool call
-              const lastToolCall = toolCalls[toolCalls.length - 1];
-              lastToolCall.function.arguments +=
-                toolCall.function?.arguments || "";
+        // // Keep track of the full message for tool calls
+        // if (chunk instanceof AIMessage) {
+        //   currentAIMessage = chunk;
+        // }
+
+        // Handle tool calls from the chunk
+        if (chunk.tool_calls && chunk.tool_calls.length > 0) {
+          toolCalls.push(...chunk.tool_calls);
+        }
+
+        // Process tool call chunks if available
+        if (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) {
+          for (const toolCallChunk of chunk.tool_call_chunks) {
+            // Find or create a tool call entry
+            let toolCall = toolCalls.find((tc) => tc.id === toolCallChunk.id);
+            if (!toolCall) {
+              toolCall = {
+                id: toolCallChunk.id,
+                name: toolCallChunk.name || "",
+                args: toolCallChunk.args || "",
+              };
+              toolCalls.push(toolCall);
+            } else {
+              // Update existing tool call with new chunks
+              if (toolCallChunk.name) toolCall.name = toolCallChunk.name;
+              if (toolCallChunk.args)
+                toolCall.args = (toolCall.args || "") + toolCallChunk.args;
             }
-          });
+          }
         }
+      }
 
-        // Check for stream end or tool call requirement
-        if (chunk.choices[0].finish_reason === "tool_calls") {
-          // Process tool calls
-          const toolCallResults = await Promise.all(
-            toolCalls.map(async (toolCall) => {
-              try {
-                const result = await this.executeToolCall(toolCall);
-                return {
-                  tool_call_id: toolCall.id,
-                  role: "tool" as const,
-                  content: result,
-                };
-              } catch (error) {
-                console.error(
-                  `Tool call ${toolCall.function.name} failed:`,
-                  error
-                );
-                return {
-                  tool_call_id: toolCall.id,
-                  role: "tool" as const,
-                  content: `Error executing tool: ${
-                    error instanceof Error ? error.message : "Unknown error"
-                  }`,
-                };
+      // Process the final gathered result
+      if (gathered && gathered.tool_calls && gathered.tool_calls.length > 0) {
+        // If we have complete tool calls, use them
+        toolCalls = gathered.tool_calls;
+
+        // Try to parse args as JSON if they're strings
+        toolCalls.forEach((call) => {
+          if (typeof call.args === "string") {
+            try {
+              call.args = JSON.parse(call.args);
+            } catch (e) {
+              console.warn("Failed to parse tool args as JSON:", call.args);
+            }
+          }
+        });
+      }
+
+      // Handle tool calls if any were accumulated
+      if (toolCalls.length > 0) {
+        const aiMessage = new AIMessage({
+          content: accumulatedResponse,
+          tool_calls: toolCalls,
+        });
+        this.messages.push(aiMessage);
+
+        // Execute tool calls
+        const toolResults = await Promise.all(
+          toolCalls.map(async (toolCall) => {
+            try {
+              const tool = this.tools.find((t) => t.name === toolCall.name);
+              if (!tool) {
+                throw new Error(`Tool ${toolCall.name} not found`);
               }
-            })
-          );
 
-          // Prepare messages for next completion
-          const newMessages = [
-            // ...messages,
-            ...toolCalls.map((toolCall, index) => ({
-              role: "assistant" as const,
-              tool_calls: [toolCall],
-            })),
-            ...toolCallResults,
-          ];
+              const result = await tool.invoke(toolCall.args);
 
-          // Recursive call to continue completion after tool calls
-          return this.streamChatCompletion(newMessages, tools, options);
-        }
+              // Handle special tool events
+              this.handleToolEvents(toolCall.name, toolCall.args);
+
+              return new ToolMessage({
+                content: result,
+                tool_call_id: toolCall.id!,
+              });
+            } catch (error) {
+              console.error(`Tool call ${toolCall.name} failed:`, error);
+              return new ToolMessage({
+                content: `Error executing tool: ${
+                  error instanceof Error ? error.message : "Unknown error"
+                }`,
+                tool_call_id: toolCall.id!,
+              });
+            }
+          })
+        );
+
+        this.messages.push(...toolResults);
+
+        // Continue streaming with tool results
+        return this.streamChatCompletion([], options);
+      } else {
+        // No tool calls, just add the final message
+        this.messages.push(new AIMessage(accumulatedResponse));
+        this.emit("streamChatCompletion:complete", accumulatedResponse);
       }
     } catch (error) {
       console.error("LLM Stream Chat Completion Error:", error);
@@ -269,68 +376,66 @@ export class LLMService extends EventEmitter {
   }
 
   async setup(message: any) {
-    // Handle setup message
     console.log("Setting up session:", message);
 
     if (message.callSid) {
       this.sessionId = message.callSid;
 
-      // Try to restore previous state for reconnection
       const restored = this.restoreState(message.callSid);
       if (!restored) {
-        // Initialize new session if no previous state found
         console.log("No previous state found, initializing new session");
-        this.messages = [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-        ];
+        this.messages = [new SystemMessage(systemPrompt)];
       }
     }
   }
 
-  async executeToolCall(
-    toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
-  ): Promise<string> {
-    try {
-      const {
-        function: { name, arguments: args },
-      } = toolCall;
-
-      // update the toolFunction to use the toolDefinitions
-      const toolFunction = {
-        verify_user_identity: verifyUser,
-        collect_phone_number: collectPhoneNumber,
-        check_pending_bill: checkPendingBill,
-        search_knowledge_base: searchKnowledgeBase,
-        human_agent_handoff: humanAgentHandoff,
-        check_hsa_account: checkHsaAccount,
-        check_payment_options: checkPaymentOptions,
-        switch_language: switchLanguage,
-      }[name];
-
-      if (!toolFunction) {
-        throw new Error(`Tool ${name} not implemented`);
-      }
-
-      const result = await toolFunction(JSON.parse(args));
-
-      if (name === "human_agent_handoff") {
-        this.emit("humanAgentHandoff", JSON.parse(args));
-      } else if (name === "switch_language") {
-        this.emit("switchLanguage", JSON.parse(args));
-      }
-      if (name === "collect_phone_number") {
+  private handleToolEvents(toolName: string, args: any): void {
+    switch (toolName) {
+      case "human_agent_handoff":
+        this.emit("humanAgentHandoff", args);
+        break;
+      case "switch_language":
+        this.emit("switchLanguage", args);
+        break;
+      case "collect_phone_number":
         this.emit("dtmfInput", "phoneNumber");
-      }
-
-      return result;
-    } catch (error) {
-      this.emit("toolCall:error", error);
-      console.error("Tool Call Error:", error);
-      throw error;
+        break;
     }
+  }
+
+  private serializeMessage(message: BaseMessage): any {
+    return {
+      type: message.getType(),
+      content: message.content,
+      additional_kwargs: message.additional_kwargs,
+    };
+  }
+
+  private deserializeMessage(serialized: any): BaseMessage {
+    switch (serialized.type) {
+      case "system":
+        return new SystemMessage(serialized.content);
+      case "human":
+        return new HumanMessage(serialized.content);
+      case "ai":
+        return new AIMessage(serialized.content);
+      case "tool":
+        return new ToolMessage({
+          content: serialized.content,
+          tool_call_id: serialized.tool_call_id,
+        });
+      default:
+        throw new Error(`Unknown message type: ${serialized.type}`);
+    }
+  }
+
+  // Helper method to add messages in a more convenient way
+  public addHumanMessage(content: string): void {
+    this.messages.push(new HumanMessage(content));
+  }
+
+  public addSystemMessage(content: string): void {
+    this.messages.push(new SystemMessage(content));
   }
 }
 

@@ -1,4 +1,3 @@
-export * from "./toolDefinitions";
 export * from "./getCurrentWeather";
 export * from "./verifyUserIdentity";
 export * from "./checkPendingBill";

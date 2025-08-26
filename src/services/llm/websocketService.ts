@@ -4,7 +4,8 @@ import { ConversationRelayMessage } from "../../types";
 import { config } from "../../config";
 import { DTMFHelper } from "./dtmfHelper";
 import { IdleTimer } from "./idleTimer";
-import { StateManager } from "./stateManager";
+
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 // Global map to track active sessions and their services
 const activeSessions = new Map<
@@ -64,10 +65,9 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
       idleTimer.on("idleTimeout", (data) => {
         console.log("Idle timer expired. Resetting state.");
         llmService.streamChatCompletion([
-          {
-            role: "user",
-            content: "dtmf input was not received. please reprompt the user.",
-          },
+          new HumanMessage(
+            "dtmf input was not received. please reprompt the user."
+          ),
         ]);
         dtmfHelper.resetState(); // Reset DTMF state
       });
@@ -160,7 +160,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
               return;
             }
             llmService.streamChatCompletion([
-              { role: "user", content: parsedMessage.voicePrompt },
+              new HumanMessage(parsedMessage.voicePrompt),
             ]);
             break;
 
@@ -189,7 +189,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
             // Only call streamChatCompletion if the collection is completed
             if (dtmfHelper["isCollectionComplete"] === true) {
               llmService.streamChatCompletion([
-                { role: "system", content: processedDTMF },
+                new SystemMessage(processedDTMF),
               ]);
               dtmfHelper.resetState(); // Reset state after completion
             }

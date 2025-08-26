@@ -14,8 +14,16 @@ A Twilio ConversationRelay project for building a Voice AI Assistant.
 
 - REST API endpoint for incoming calls
 - WebSocket real-time communication
-- Uses OpenAI model and ChatCompletion API in `LLMService`
-  - Supports both streaming and non-streaming responses
+- Abstracted LLM service supporting multiple providers:
+  - OpenAI (ChatGPT models)
+  - Anthropic (Claude models)
+  - Custom LangChain-compatible models
+- Abstracted embedding service supporting multiple providers:
+  - OpenAI embeddings
+  - HuggingFace sentence transformers
+  - Custom embedding models
+- RAG (Retrieval Augmented Generation) with vector database
+- Supports both streaming and non-streaming responses
 - Jest for unit testing
 
 ## Prerequisites
@@ -50,9 +58,30 @@ Once created, open `.env` in your code editor. You are required to set the follo
 | `TWILIO_AUTH_TOKEN` | Your Twilio Auth Token, which is also found in the Twilio Console. | `your_auth_token_here` |
 | `TWILIO_WORKFLOW_SID` | The Taskrouter Workflow SID, which is automatically provisioned with your Flex account. Used to enqueue inbound call with Flex agents. To find this, in the Twilio Console go to TaskRouter > Workspaces > Flex Task Assignment > Workflows |`WWXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`|
 | `WELCOME_GREETING` | The message automatically played to the caller |
-| `OPENAI_API_KEY` | Your OpenAI API Key | `your_api_key_here` |
+
+#### LLM Configuration (Choose one provider)
+
+| Variable Name       | Description                                 | Example Value                         |
+| ------------------- | ------------------------------------------- | ------------------------------------- |
+| `LLM_PROVIDER`      | The LLM provider to use                     | `openai` or `anthropic`               |
+| `LLM_MODEL_NAME`    | The specific model to use (optional)        | `gpt-4` or `claude-3-sonnet-20240229` |
+| `LLM_TEMPERATURE`   | Model temperature (optional)                | `0.7`                                 |
+| `LLM_STREAMING`     | Enable streaming responses (optional)       | `true`                                |
+| `OPENAI_API_KEY`    | Your OpenAI API Key (if using OpenAI)       | `sk-your_openai_key_here`             |
+| `ANTHROPIC_API_KEY` | Your Anthropic API Key (if using Anthropic) | `sk-ant-your_anthropic_key_here`      |
+
+#### Embedding Configuration (Optional)
+
+| Variable Name              | Description                                  | Example Value                                                        |
+| -------------------------- | -------------------------------------------- | -------------------------------------------------------------------- |
+| `EMBEDDING_PROVIDER`       | The embedding provider to use                | `openai`, `huggingface`, or `anthropic`                              |
+| `EMBEDDING_MODEL_NAME`     | The specific embedding model (optional)      | `text-embedding-ada-002` or `sentence-transformers/all-MiniLM-L6-v2` |
+| `EMBEDDING_BATCH_SIZE`     | Batch size for processing (optional)         | `512`                                                                |
+| `HUGGINGFACEHUB_API_TOKEN` | HuggingFace API token (if using HuggingFace) | `hf_your_huggingface_token_here`                                     |
 
 Below is an optional environment variable that has default value that can be overridden:
+| Variable Name | Description | Example Value |
+|-------------------|--------------------------------------------------|------------------------|
 | `PORT` | The port your local server runs on. | `3000` |
 
 5. In the Twilio Console, go to Phone Numbers > Manage > Active Numbers and select an existing phone number (or Buy a number). In your Phone Number configuration settings, update the first A call comes in dropdown to Webhook and set the URL to https://[your-ngrok-domain].ngrok.app/api/incoming-call, ensure HTTP is set to HTTP POST, and click Save configuration.

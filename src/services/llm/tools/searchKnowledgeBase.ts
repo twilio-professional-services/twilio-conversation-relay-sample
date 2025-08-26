@@ -1,7 +1,9 @@
 // Define types and fix missing references
 import { Chroma } from "@langchain/community/vectorstores/chroma";
-import { OpenAIEmbeddings } from "@langchain/openai";
 import { OpenAI } from "openai";
+import { z } from "zod";
+import { tool } from "@langchain/core/tools";
+import { createEmbeddingService } from "../../embedding/embeddingService";
 
 import dotenv from "dotenv";
 
@@ -22,9 +24,11 @@ const openai = new OpenAI({
 // // Initialize ChromaDB collection with persistence
 async function initializeChroma() {
   try {
-    // Initialize Chroma with LangChain
+    // Initialize Chroma with LangChain using embedding abstraction
     console.log(COLLECTION_NAME);
-    knowledgeCollection = new Chroma(new OpenAIEmbeddings(), {
+
+    const embeddingService = createEmbeddingService();
+    knowledgeCollection = new Chroma(embeddingService, {
       collectionName: COLLECTION_NAME,
       url: `http://localhost:8000`,
     });
@@ -39,44 +43,55 @@ async function initializeChroma() {
 
 initializeChroma();
 
-export async function searchKnowledgeBase(params: any): Promise<any[]> {
-  //  Auto-initialize if not connected
-  if (!knowledgeCollection) {
-    console.log("ChromaDB not initialized, initializing with defaults...");
-    await initializeChroma();
-  }
-
-  const { query, numResults = 1 } = params;
-
-  if (!knowledgeCollection) {
-    throw new Error("Failed to initialize ChromaDB connection.");
-  }
-
-  if (!query || query.trim().length === 0) {
-    throw new Error("Query cannot be empty.");
-  }
-
-  try {
-    const documents = await knowledgeCollection.similaritySearch(
-      query.trim(),
-      numResults
-    );
-
-    if (!documents || !documents.length) {
-      return [];
+export const searchKnowledgeBaseTool = tool(
+  async (params: any): Promise<any[]> => {
+    //  Auto-initialize if not connected
+    if (!knowledgeCollection) {
+      console.log("ChromaDB not initialized, initializing with defaults...");
+      await initializeChroma();
     }
 
-    const results = documents.map((doc: any, index: number) => ({
-      id: doc.id || `doc_${index}`,
-      document: doc.pageContent || doc.content || doc,
-      metadata: doc.metadata || {},
-      relevanceScore: doc.relevanceScore || 1,
-      distance: doc.distance || 0,
-    }));
-    console.log("Search results:", results);
-    return results[0].document;
-  } catch (error) {
-    console.error("Search error:", error);
-    throw new Error(`Search failed: ${error}`);
+    const { query, numResults = 1 } = params;
+
+    if (!knowledgeCollection) {
+      throw new Error("Failed to initialize ChromaDB connection.");
+    }
+
+    if (!query || query.trim().length === 0) {
+      throw new Error("Query cannot be empty.");
+    }
+
+    try {
+      const documents = await knowledgeCollection.similaritySearch(
+        query.trim(),
+        numResults
+      );
+
+      if (!documents || !documents.length) {
+        return [];
+      }
+
+      const results = documents.map((doc: any, index: number) => ({
+        id: doc.id || `doc_${index}`,
+        document: doc.pageContent || doc.content || doc,
+        metadata: doc.metadata || {},
+        relevanceScore: doc.relevanceScore || 1,
+        distance: doc.distance || 0,
+      }));
+      console.log("Search results:", results);
+      return results[0].document;
+    } catch (error) {
+      console.error("Search error:", error);
+      throw new Error(`Search failed: ${error}`);
+    }
+  },
+  {
+    name: "search_knowledge_base",
+    description:
+      "Search the knowledge base for relevant documents to assist with user queries on business hours and parking.",
+    schema: z.object({
+      query: z.string().min(2).max(1000),
+      numResults: z.number().min(1).optional(),
+    }) as any,
   }
-}
+);

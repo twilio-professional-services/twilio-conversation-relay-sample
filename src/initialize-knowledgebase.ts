@@ -1,9 +1,9 @@
 import { Chroma } from "@langchain/community/vectorstores/chroma";
-import { OpenAIEmbeddings } from "@langchain/openai";
 import * as fs from "fs/promises";
 import { OpenAI } from "openai";
 import * as path from "path";
 import dotenv from "dotenv";
+import { createEmbeddingService } from "./services/embedding/embeddingService";
 
 // Load environment variables
 dotenv.config();
@@ -254,9 +254,12 @@ interface ChatCompletionTool {
 // Initialize ChromaDB collection with persistence
 async function initializeChroma() {
   try {
+    // Create embedding service using abstraction
+    const embeddingService = createEmbeddingService();
+
     // Initialize Chroma with LangChain
     knowledgeCollection = await Chroma.fromExistingCollection(
-      new OpenAIEmbeddings(),
+      embeddingService,
       {
         collectionName: COLLECTION_NAME,
         url: `http://localhost:8000`,
@@ -283,7 +286,10 @@ async function initializeChroma() {
     console.error("❌ Error connecting to ChromaDB:", error);
     console.log("📝 Creating new ChromaDB collection...");
 
-    knowledgeCollection = await new Chroma(new OpenAIEmbeddings(), {
+    // Create embedding service using abstraction
+    const embeddingService = createEmbeddingService();
+
+    knowledgeCollection = await new Chroma(embeddingService, {
       collectionName: COLLECTION_NAME,
       url: `http://localhost:8000`,
     });

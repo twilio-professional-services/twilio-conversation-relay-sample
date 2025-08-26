@@ -12,8 +12,10 @@
     "init-vectordb": "node src/initialize-knowledgebase.ts"
   },
   "dependencies": {
+    "@langchain/anthropic": "^0.3.26",
     "@langchain/community": "^0.3.53",
     "@langchain/core": "^0.3.72",
+    "@langchain/openai": "^0.6.9",
     "chromadb": "^3.0.14",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

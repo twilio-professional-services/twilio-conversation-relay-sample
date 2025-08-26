@@ -1,8 +1,8 @@
-import { OpenAI } from "openai";
+import { BaseMessage } from "@langchain/core/messages";
 
 export interface LLMServiceState {
   sessionId: string;
-  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+  messages: BaseMessage[]; // Array of messages using the BaseMessage type
   userInterrupted?: boolean;
   timestamp: number;
 }
@@ -25,14 +25,14 @@ export class StateManager {
       ...state,
       timestamp: Date.now(),
     });
-    
+
     // Clean up old states
     this.cleanupOldStates();
   }
 
   restoreState(sessionId: string): LLMServiceState | null {
     const state = this.sessionStates.get(sessionId);
-    
+
     if (!state) {
       console.log(`No saved state found for session ${sessionId}`);
       return null;
