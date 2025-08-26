@@ -1,4 +1,5 @@
 import { Chroma } from "@langchain/community/vectorstores/chroma";
+import { Document } from "@langchain/core/documents";
 import * as fs from "fs/promises";
 import { OpenAI } from "openai";
 import * as path from "path";
@@ -289,7 +290,7 @@ async function initializeChroma() {
     // Create embedding service using abstraction
     const embeddingService = createEmbeddingService();
 
-    knowledgeCollection = await new Chroma(embeddingService, {
+    knowledgeCollection = new Chroma(embeddingService, {
       collectionName: COLLECTION_NAME,
       url: `http://localhost:8000`,
     });
@@ -318,18 +319,9 @@ async function updateDocumentsFromFiles(): Promise<void> {
     for (const relativePath of filesToUpdate) {
       try {
         if (knowledgeCollection) {
-          const existingDocs = await knowledgeCollection.get({
-            where: { relativePath: relativePath },
+          await knowledgeCollection.delete({
+            filter: { relativePath: relativePath },
           });
-
-          if (existingDocs?.ids?.length) {
-            console.log(
-              `🗑️  Removing ${existingDocs.ids.length} old document chunks for ${relativePath}`
-            );
-            await knowledgeCollection.delete({
-              ids: existingDocs.ids,
-            });
-          }
         }
       } catch (error) {
         console.log(`ℹ️  No existing documents found for ${relativePath}`);
@@ -341,10 +333,13 @@ async function updateDocumentsFromFiles(): Promise<void> {
       const langchainDocs = newDocuments.map((doc) => ({
         pageContent: doc.document,
         metadata: doc.metadata,
-        id: doc.id,
       }));
 
-      await knowledgeCollection.addDocuments(langchainDocs);
+      const documentIds = newDocuments.map((doc) => doc.id);
+
+      await knowledgeCollection.addDocuments(langchainDocs, {
+        ids: documentIds,
+      });
 
       console.log(
         `✅ Updated ${newDocuments.length} document chunks from ${changedFiles.length} changed files`
@@ -434,7 +429,12 @@ export async function cleanupDeletedFiles(): Promise<void> {
   );
 
   // Get all documents and their file paths
-  const allDocs = await knowledgeCollection.get({});
+  if (!knowledgeCollection.collection) {
+    console.log("✅ No collection available for cleanup");
+    return;
+  }
+
+  const allDocs = (await knowledgeCollection.collection.get()) || {};
 
   if (!allDocs?.metadatas?.length) {
     console.log("✅ No documents found for cleanup");
@@ -493,8 +493,13 @@ export async function getCollectionStats(): Promise<void> {
   }
 
   try {
+    if (!knowledgeCollection.collection) {
+      console.log("❌ Collection not available");
+      return;
+    }
+
     const totalCount = await knowledgeCollection.collection.count();
-    const allDocs = await knowledgeCollection.get({});
+    const allDocs = await knowledgeCollection.collection.get({});
 
     // Analyze documents by file
     const fileStats = new Map<
@@ -551,7 +556,11 @@ export async function getTrackedFiles(): Promise<string[]> {
   }
 
   try {
-    const allDocs = await knowledgeCollection.get({});
+    if (!knowledgeCollection.collection) {
+      return [];
+    }
+
+    const allDocs = await knowledgeCollection.collection.get({});
     const files = new Set<string>();
 
     allDocs.metadatas?.forEach((metadata: any) => {
