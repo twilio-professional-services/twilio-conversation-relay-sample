@@ -9,7 +9,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "jest",
     "lint": "eslint . --ext .ts",
-    "init-vectordb": "node src/initialize-knowledgebase.ts"
+    "init-vectordb": "node dist/initialize-knowledgebase.js"
   },
   "dependencies": {
     "@langchain/anthropic": "^0.3.26",
