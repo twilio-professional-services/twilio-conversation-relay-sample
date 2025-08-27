@@ -1,20 +1,25 @@
-import express, { Request, Response } from 'express';
-import { handleIncomingCall } from '../controllers/callController';
+import express, { Request, Response } from "express";
+import { handleIncomingCall } from "../controllers/callController";
+import { validateTwilioWebhookConditional } from "../middleware/webhookValidation";
 
 const router = express.Router();
 
-router.post('/incoming-call', async (req: Request, res: Response) => {
-  try {
-
-    const query = {
-      ...req.query};
-    let callDetails = await handleIncomingCall({...query, ...req.body});
-    res.type('text/xml');
-    console.log('Incoming call', callDetails);
-    res.status(200).send(callDetails);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to process incoming call' });
+router.post(
+  "/incoming-call",
+  validateTwilioWebhookConditional,
+  async (req: Request, res: Response) => {
+    try {
+      const query = {
+        ...req.query,
+      };
+      let callDetails = await handleIncomingCall({ ...query, ...req.body });
+      res.type("text/xml");
+      console.log("Incoming call", callDetails);
+      res.status(200).send(callDetails);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to process incoming call" });
+    }
   }
-});
+);
 
 export default router;
