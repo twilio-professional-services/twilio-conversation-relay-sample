@@ -140,8 +140,8 @@ export class LLMService extends EventEmitter {
       this._userInterrupted = savedState.userInterrupted;
 
       this.messages.push(
-        new SystemMessage(
-          "Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request."
+        new HumanMessage(
+          "[Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request.]"
         )
       );
 

@@ -5,7 +5,7 @@ import { config } from "../../config";
 import { DTMFHelper } from "./dtmfHelper";
 import { IdleTimer } from "./idleTimer";
 
-import { SystemMessage, HumanMessage } from "@langchain/core/messages";
+import { HumanMessage } from "@langchain/core/messages";
 
 // Global map to track active sessions and their services
 const activeSessions = new Map<
@@ -22,7 +22,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
     let idleTimer: IdleTimer;
     let currentSessionId: string = "";
 
-    // Automatically close the WebSocket after 30 seconds for simulation
+    // // Automatically close the WebSocket after 30 seconds for simulation
     // setTimeout(() => {
     //   if (ws.readyState === WebSocket.OPEN) {
     //     console.log("Simulating WebSocket close after 30 seconds");
@@ -189,7 +189,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
             // Only call streamChatCompletion if the collection is completed
             if (dtmfHelper["isCollectionComplete"] === true) {
               llmService.streamChatCompletion([
-                new SystemMessage(processedDTMF),
+                new HumanMessage(processedDTMF),
               ]);
               dtmfHelper.resetState(); // Reset state after completion
             }
