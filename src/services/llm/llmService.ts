@@ -78,6 +78,7 @@ export class LLMService extends EventEmitter {
 
     // Initialize tools
     this.tools = [
+      verifyUserTool,
       switchLanguageTool,
       humanAgentHandoffTool,
       // getCurrentWeatherTool,
