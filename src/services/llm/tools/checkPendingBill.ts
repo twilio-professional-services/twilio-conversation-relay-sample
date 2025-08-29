@@ -15,7 +15,15 @@ export async function checkPendingBillImplementation(
     return "No pending bill found.";
   }
 
-  return JSON.stringify({ userId: params.userId, bill });
+  // for some models a reminder may be necessary to normalize the text
+  // const result = `Here is pending bill information I found. Note: don't forgot to normalize the text. ${JSON.stringify(
+  //   { userId: params.userId, bill }
+  // )}`;
+
+  const result = `${JSON.stringify({ userId: params.userId, bill })}`;
+
+  console.log(result);
+  return result;
 }
 
 // @ts-ignore

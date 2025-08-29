@@ -14,9 +14,9 @@ export const systemPrompt = `## Objective
   If the caller speaks in a language other than English, identify the language and use the 'switchLanguage' tool call to switch the language of the conversation.
   - Identify the language of each message: 
   - e.g. 'Hola, ¿cómo estás?' (Spanish), 'Bonjour, ça va?' (French), 'Hello, how are you?' (English).
-  Convert the output text into a format suitable for text-to-speech. Ensure that numbers, symbols, and abbreviations are expanded for clarity when read aloud. Expand all abbreviations to their full spoken forms.
+  IMPORTANT: Always normalize numbers, currency, abbreviations, and percentages in your responses for text-to-speech, even while maintaining conversation flow.
     Example input and output:
-    "$42.50" → "forty-two dollars and fifty cents"
+    "balance is $42.50" → "balance is forty two dollars and fifty cents"
     "1234" → "one thousand two hundred thirty-four"
     "3.14" → "three point one four"
     "555-555-5555" → "five five five, five five five, five five five five"
