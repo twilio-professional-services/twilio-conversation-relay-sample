@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import twilio from "twilio";
-import { config } from "../config";
+import { ConversationRelayHelper } from "../helpers/conversationRelayHelper";
 
 dotenv.config();
 
@@ -22,15 +22,7 @@ export async function handleConnectAction(actionPayload: any) {
       console.log("Websocket ended abruptly, likely due to network issues.");
 
       // restart conversationrelay session
-
-      return `<Response>
-                    <Connect action="https://${config.ngrok.domain}/api/action">
-                          <ConversationRelay url="wss://${config.ngrok.domain}" dtmfDetection="true" interruptByDtmf="false" >
-                            <Language code="es-US" ttsProvider="ElevenLabs" voice="h415g7h7bSwQrn1qw4ar" />
-                            <Language code="en-US" ttsProvider="ElevenLabs" voice="g6xIsTj2HwM6VR4iXFCw" />
-                          </ConversationRelay>
-                    </Connect>
-                </Response>`;
+      return ConversationRelayHelper.createDefaultConversationRelayResponse();
     }
 
     const voiceResponse = new twilio.twiml.VoiceResponse();

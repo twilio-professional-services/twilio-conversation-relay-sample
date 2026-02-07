@@ -6,6 +6,8 @@ export interface LanguageOption {
   speechModel?: string;
 }
 
+// Note: Language options are now configured via environment variables in config.ts
+// This file maintains the interface and can be used for reference or fallback values
 export const languageOptions: { [key: string]: LanguageOption } = {
   spanish: {
     locale_code: "es-US",

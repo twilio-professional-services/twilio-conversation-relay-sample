@@ -18,6 +18,9 @@ const configSchema = z.object({
   // Conversation Relay Welcome Greeting
   WELCOME_GREETING: z.string().optional(),
 
+  // Conversation Relay Intelligence Service
+  TWILIO_CONVERSATIONAL_INTELLIGENCE_SERVICE: z.string().optional(),
+
   // Speech Service Configuration
   SPEECH_KEY: z.string().optional(),
   SPEECH_REGION: z.string().optional(),
@@ -85,6 +88,8 @@ export const config = {
     authToken: parsedConfig.TWILIO_AUTH_TOKEN,
     workflowSid: parsedConfig.TWILIO_WORKFLOW_SID,
     welcomeGreeting: parsedConfig.WELCOME_GREETING,
+    conversationalIntelligenceService:
+      parsedConfig.TWILIO_CONVERSATIONAL_INTELLIGENCE_SERVICE,
   },
   ngrok: {
     domain: parsedConfig.NGROK_DOMAIN,
