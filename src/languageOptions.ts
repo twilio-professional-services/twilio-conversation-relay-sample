@@ -18,10 +18,10 @@ export const languageOptions: { [key: string]: LanguageOption } = {
   },
   english: {
     locale_code: "en-US",
-    ttsProvider: "google",
-    voice: "en-US-Journey-O",
-    transcriptionProvider: "google",
-    speechModel: "telephony",
+    ttsProvider: "ElevenLabs",
+    voice: "g6xIsTj2HwM6VR4iXFCw",
+    transcriptionProvider: "Deepgram",
+    speechModel: "nova-3-general",
   },
 };
 
