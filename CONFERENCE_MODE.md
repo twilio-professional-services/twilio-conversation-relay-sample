@@ -17,7 +17,7 @@ USE_CONFERENCE=true   # Conference mode with outbound participant
 
 ### Flow Diagram
 
-![Voice Agent Direct Mode](docs/Voice%20Agent-Direct.png)
+![Voice Agent Direct Mode](docs/Voice-Agent-Direct.png)
 
 ### Description
 
@@ -69,9 +69,11 @@ USE_CONFERENCE=true   # Conference mode with outbound participant
 2. **Conference created** - Server returns TwiML to place caller in conference
 3. **Caller joins conference** - Caller is placed in a conference bridge (named by CallSid)
 4. **Participant added** - Server calls Twilio API to add a participant:
-   - `to`: `OUTBOUND_TO` (a Twilio number that returns ConversationRelay TwiML)
-   - `from`: `OUTBOUND_FROM` (caller ID for the outbound call)
-5. **Outbound leg answers** - The `OUTBOUND_TO` number receives the call and triggers `/api/outbound-leg-answer`
+   - `to`: `OUTBOUND_TO` (can be a TwiML App SID like `app:APxxxx` or a phone number)
+   - `from`: `OUTBOUND_FROM` (caller ID for the outbound call, required for PSTN numbers)
+5. **Outbound leg answers** - Depending on the `to` parameter:
+   - **TwiML App**: Twilio invokes the app's Voice URL which should point to `/api/outbound-leg-answer`
+   - **Phone number**: The number answers and should be configured to call `/api/outbound-leg-answer`
 6. **AI connection** - The outbound leg webhook returns ConversationRelay TwiML
 7. **Conference active** - Both caller and AI agent are in the same conference
 
@@ -108,9 +110,31 @@ USE_CONFERENCE=true   # Conference mode with outbound participant
 When `USE_CONFERENCE=true`, you **must** configure:
 
 ```env
+# Option 1: Using TwiML App (recommended - no PSTN charges for outbound leg)
+OUTBOUND_TO=app:APxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # TwiML App SID
+OUTBOUND_FROM=+1987654321                       # From number (caller ID)
+
+# Option 2: Using PSTN number
 OUTBOUND_TO=+1234567890    # Twilio number that returns ConversationRelay TwiML
 OUTBOUND_FROM=+1987654321  # Caller ID for outbound call
 ```
+
+#### TwiML App Setup (Option 1)
+
+When using a TwiML App, configure the app's Voice URL to point to your server's `/api/outbound-leg-answer` endpoint:
+
+- Voice URL: `https://your-domain/api/outbound-leg-answer`
+- Voice Method: `POST`
+
+This approach is recommended because:
+
+- No PSTN charges for the outbound leg
+- Simpler configuration (no need for a separate phone number)
+- Faster connection (no dialing delay)
+
+#### PSTN Number Setup (Option 2)
+
+When using a phone number, configure the Twilio number to call your server's `/api/outbound-leg-answer` endpoint when it receives a call.
 
 ### Advantages
 
@@ -119,6 +143,7 @@ OUTBOUND_FROM=+1987654321  # Caller ID for outbound call
 - **Hold/transfer** - Can implement hold music, call transfer
 - **Monitoring** - Can add supervisor/monitor participants
 - **Advanced features** - Access to conference-specific features (mute, kick, etc.)
+- **Cost optimization** - Using TwiML App for the AI participant eliminates PSTN charges for the outbound leg
 
 ### Use Cases
 
@@ -132,15 +157,16 @@ OUTBOUND_FROM=+1987654321  # Caller ID for outbound call
 
 ## Key Differences Summary
 
-| Aspect               | Direct Mode (false) | Conference Mode (true)            |
-| -------------------- | ------------------- | --------------------------------- |
-| **Setup Complexity** | Simple              | More complex                      |
-| **Call Legs**        | 1 (inbound)         | 2 (inbound + outbound)            |
-| **Latency**          | Lower               | Slightly higher                   |
-| **Cost**             | Lower (1 call leg)  | Higher (2 call legs + conference) |
-| **Multi-party**      | No                  | Yes                               |
-| **Hold/Transfer**    | Limited             | Full support                      |
-| **Monitoring**       | No                  | Can add supervisor                |
+| Aspect               | Direct Mode (false) | Conference Mode (true)                                |
+| -------------------- | ------------------- | ----------------------------------------------------- |
+| **Setup Complexity** | Simple              | More complex                                          |
+| **Required Config**  | None additional     | `OUTBOUND_TO`, `OUTBOUND_FROM`                        |
+| **Call Legs**        | 1 (inbound)         | 2 (inbound + outbound)                                |
+| **Latency**          | Lower               | Slightly higher                                       |
+| **Cost**             | Lower (1 call leg)  | Higher (conference + PSTN leg if not using TwiML App) |
+| **Multi-party**      | No                  | Yes                                                   |
+| **Hold/Transfer**    | Limited             | Full support                                          |
+| **Monitoring**       | No                  | Can add supervisor                                    |
 
 ---
 
@@ -171,11 +197,25 @@ OUTBOUND_FROM=+1987654321  # Caller ID for outbound call
 
 ### Conference Mode
 
-- `src/controllers/callController.ts:26-62` - Creates conference and adds participant
+- `src/controllers/callController.ts:26-62` - Creates conference and adds participant (line 49 uses TwiML App dial)
 - `src/controllers/outboundLegController.ts` - Handles outbound leg answer
-- `src/routes/outboundLegRoutes.ts` - Route for outbound leg webhook
+- `src/routes/outboundLegRoutes.ts` - Route for outbound leg webhook (`/api/outbound-leg-answer`)
 
 ### Configuration
 
 - `src/config.ts` - Environment variable validation and configuration
 - `.env` - Set `USE_CONFERENCE` and related variables
+
+### Note on Current Implementation
+
+The current implementation in `src/controllers/callController.ts:49` uses TwiML App dialing:
+
+```typescript
+to: `app:AP804756aa4fb6c350a3f1feb1dcfc4be8`;
+```
+
+To use PSTN numbers instead, change the `to` parameter to use the `OUTBOUND_TO` environment variable directly:
+
+```typescript
+to: outboundTo; // Will use the value from config.twilio.outboundTo
+```
