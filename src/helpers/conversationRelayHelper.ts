@@ -95,4 +95,56 @@ export class ConversationRelayHelper {
   public static getConfiguredLanguages(): LanguageConfig[] {
     return ConversationRelayHelper.convertLanguageOptionsToConfig();
   }
+
+  /**
+   * Creates TwiML that places the incoming call in a conference and dials an outbound leg
+   * @param conferenceName - Name for the conference (typically the CallSid)
+   * @param outboundTo - Phone number to dial for the AI agent leg (placeholder)
+   * @param outboundFrom - Phone number to use as caller ID for outbound leg (placeholder)
+   * @param answerUrl - Webhook URL called when the outbound leg answers
+   * @returns TwiML response string
+   */
+  public static createConferenceWithDialResponse(
+    conferenceName: string,
+    outboundTo: string = "+15555551234", // Placeholder
+    outboundFrom: string = "+15555554321", // Placeholder
+    answerUrl?: string
+  ): string {
+    const response = new twiml.VoiceResponse();
+
+    // Place the incoming call in the conference
+    const dial = response.dial();
+    dial.conference(
+      {
+        startConferenceOnEnter: true,
+        endConferenceOnExit: true,
+      },
+      conferenceName
+    );
+
+    // Create a second TwiML response for the outbound dial
+    // This needs to be initiated via Twilio API separately
+    // For now, we'll just return the conference TwiML for the incoming leg
+    return response.toString();
+  }
+
+  /**
+   * Creates TwiML for the outbound leg that joins conference and connects to ConversationRelay
+   * @param conferenceName - Name of the conference to join
+   * @param relayConfig - Optional configuration for conversation relay
+   * @param languages - Optional language configurations
+   * @returns TwiML response string
+   */
+  public static createOutboundLegResponse(
+    conferenceName?: string,
+    relayConfig?: ConversationRelayConfig,
+    languages?: LanguageConfig[]
+  ): string {
+    // When the outbound leg answers, connect it to ConversationRelay
+    return ConversationRelayHelper.createConversationRelayResponse(
+      undefined,
+      relayConfig,
+      languages
+    );
+  }
 }

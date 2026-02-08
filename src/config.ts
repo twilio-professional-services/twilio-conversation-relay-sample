@@ -11,6 +11,13 @@ const configSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().min(1, "Twilio Account SID is required"),
   TWILIO_AUTH_TOKEN: z.string().min(1, "Twilio Auth Token is required"),
   TWILIO_WORKFLOW_SID: z.string().min(1, "Twilio Workflow SID is required"),
+  USE_CONFERENCE: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.toLowerCase() === "true" : false))
+    .default("false"),
+  OUTBOUND_TO: z.string().optional(),
+  OUTBOUND_FROM: z.string().optional(),
 
   // Ngrok Configuration
   NGROK_DOMAIN: z.string().optional(),
@@ -66,7 +73,19 @@ const configSchema = z.object({
 
   // Optional: Server Port
   PORT: z.string().optional().default("3000"),
-});
+}).refine(
+  (data) => {
+    // If USE_CONFERENCE is true, OUTBOUND_TO and OUTBOUND_FROM are required
+    if (data.USE_CONFERENCE === "true") {
+      return !!data.OUTBOUND_TO && !!data.OUTBOUND_FROM;
+    }
+    return true;
+  },
+  {
+    message: "OUTBOUND_TO and OUTBOUND_FROM are required when USE_CONFERENCE is true",
+    path: ["OUTBOUND_TO", "OUTBOUND_FROM"],
+  }
+);
 
 // Validate and parse the environment variables
 let parsedConfig: z.infer<typeof configSchema>;
@@ -90,6 +109,9 @@ export const config = {
     welcomeGreeting: parsedConfig.WELCOME_GREETING,
     conversationalIntelligenceService:
       parsedConfig.TWILIO_CONVERSATIONAL_INTELLIGENCE_SERVICE,
+    useConference: parsedConfig.USE_CONFERENCE,
+    outboundTo: parsedConfig.OUTBOUND_TO,
+    outboundFrom: parsedConfig.OUTBOUND_FROM,
   },
   ngrok: {
     domain: parsedConfig.NGROK_DOMAIN,
