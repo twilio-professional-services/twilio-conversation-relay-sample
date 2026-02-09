@@ -9,7 +9,7 @@ import {
 import { StructuredTool } from "@langchain/core/tools";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { EventEmitter } from "events";
-import { systemPrompt } from "../../prompts/systemPrompt";
+import { inboundSystemPrompt } from "../../prompts/systemPrompt";
 import {
   verifyUserTool,
   checkPendingBillTool,
@@ -53,7 +53,7 @@ export class LLMService extends EventEmitter {
         llmConfig?.modelName ||
         config.llm.modelName ||
         this.getDefaultModelName(
-          llmConfig?.provider || config.llm.provider || "openai"
+          llmConfig?.provider || config.llm.provider || "openai",
         ),
       temperature: llmConfig?.temperature ?? config.llm.temperature,
       streaming: llmConfig?.streaming ?? config.llm.streaming ?? true,
@@ -61,7 +61,7 @@ export class LLMService extends EventEmitter {
       apiKey:
         llmConfig?.apiKey ||
         this.getApiKeyForProvider(
-          llmConfig?.provider || config.llm.provider || "openai"
+          llmConfig?.provider || config.llm.provider || "openai",
         ),
     };
 
@@ -73,7 +73,7 @@ export class LLMService extends EventEmitter {
       throw error;
     }
 
-    this.messages = [new SystemMessage(systemPrompt)];
+    this.messages = [new SystemMessage(inboundSystemPrompt)];
     this.stateManager = StateManager.getInstance();
 
     // Initialize tools
@@ -136,14 +136,14 @@ export class LLMService extends EventEmitter {
     if (savedState) {
       this.sessionId = savedState.sessionId;
       this.messages = savedState.messages.map((msg) =>
-        this.deserializeMessage(msg)
+        this.deserializeMessage(msg),
       );
       this._userInterrupted = savedState.userInterrupted;
 
       this.messages.push(
         new HumanMessage(
-          "[Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request.]"
-        )
+          "[Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request.]",
+        ),
       );
 
       console.log(`State restored for session ${sessionId}`);
@@ -161,7 +161,7 @@ export class LLMService extends EventEmitter {
 
   async chatCompletion(
     newMessages: BaseMessage[],
-    options?: RunnableConfig
+    options?: RunnableConfig,
   ): Promise<BaseMessage> {
     try {
       // Add incoming messages to the conversation history
@@ -210,7 +210,7 @@ export class LLMService extends EventEmitter {
                 tool_call_id: toolCall.id!,
               });
             }
-          })
+          }),
         );
 
         // Add tool results to messages
@@ -235,7 +235,7 @@ export class LLMService extends EventEmitter {
 
   async streamChatCompletion(
     newMessages: BaseMessage[],
-    options?: RunnableConfig
+    options?: RunnableConfig,
   ): Promise<void> {
     try {
       this.messages.push(...newMessages);
@@ -358,7 +358,7 @@ export class LLMService extends EventEmitter {
                 tool_call_id: toolCall.id!,
               });
             }
-          })
+          }),
         );
 
         this.messages.push(...toolResults);
@@ -376,7 +376,7 @@ export class LLMService extends EventEmitter {
     }
   }
 
-  async setup(message: any) {
+  async setup(message: any, customPrompt?: string) {
     console.log("Setting up session:", message);
 
     if (message.callSid) {
@@ -385,7 +385,13 @@ export class LLMService extends EventEmitter {
       const restored = this.restoreState(message.callSid);
       if (!restored) {
         console.log("No previous state found, initializing new session");
-        this.messages = [new SystemMessage(systemPrompt)];
+        // Use custom prompt if provided, otherwise use default
+        const promptToUse = customPrompt || inboundSystemPrompt;
+        this.messages = [new SystemMessage(promptToUse)];
+
+        if (customPrompt) {
+          console.log("Using custom system prompt with customer context");
+        }
       }
     }
   }

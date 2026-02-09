@@ -19,6 +19,35 @@ const configSchema = z.object({
   OUTBOUND_TO: z.string().optional(),
   OUTBOUND_FROM: z.string().optional(),
 
+  // Outbound Calling & AMD Configuration
+  ENABLE_OUTBOUND_AMD: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.toLowerCase() === "true" : true))
+    .default("true"),
+  AMD_TIMEOUT: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 5000))
+    .default("5000"),
+  AMD_SPEECH_THRESHOLD: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 2400))
+    .default("2400"),
+  AMD_SPEECH_END_THRESHOLD: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 1200))
+    .default("1200"),
+  VOICEMAIL_MESSAGE: z
+    .string()
+    .optional()
+    .default(
+      "Hello, this is ABC Health System. We attempted to reach you. Please call us back at your earliest convenience."
+    ),
+  OUTBOUND_CALLER_ID: z.string().optional(),
+
   // Ngrok Configuration
   NGROK_DOMAIN: z.string().optional(),
 
@@ -112,6 +141,14 @@ export const config = {
     useConference: parsedConfig.USE_CONFERENCE,
     outboundTo: parsedConfig.OUTBOUND_TO,
     outboundFrom: parsedConfig.OUTBOUND_FROM,
+  },
+  outbound: {
+    enableAMD: parsedConfig.ENABLE_OUTBOUND_AMD,
+    amdTimeout: parsedConfig.AMD_TIMEOUT,
+    amdSpeechThreshold: parsedConfig.AMD_SPEECH_THRESHOLD,
+    amdSpeechEndThreshold: parsedConfig.AMD_SPEECH_END_THRESHOLD,
+    voicemailMessage: parsedConfig.VOICEMAIL_MESSAGE,
+    callerId: parsedConfig.OUTBOUND_CALLER_ID,
   },
   ngrok: {
     domain: parsedConfig.NGROK_DOMAIN,

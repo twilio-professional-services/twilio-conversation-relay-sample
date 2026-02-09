@@ -7,3 +7,4 @@ coverage/
 vector_db/
 documents/
 chroma/
+CLAUDE.local.md

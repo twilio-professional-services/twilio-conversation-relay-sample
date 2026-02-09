@@ -4,6 +4,8 @@ import { ConversationRelayMessage } from "../../types";
 import { config } from "../../config";
 import { DTMFHelper } from "./dtmfHelper";
 import { IdleTimer } from "./idleTimer";
+import { getCustomerContext } from "../../controllers/outboundCallController";
+import { generateOutboundSystemPrompt } from "../../prompts/systemPrompt";
 
 import { HumanMessage } from "@langchain/core/messages";
 
@@ -143,7 +145,21 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
             // callSid as sessionId
             const sessionId = parsedMessage.callSid;
             initializeSession(sessionId);
-            llmService.setup(parsedMessage);
+
+            // Check for customer context (indicates outbound call)
+            const customerContext = getCustomerContext(sessionId);
+            let customPrompt = undefined;
+
+            if (customerContext !== undefined) {
+              // This is an outbound call - use outbound-specific system prompt
+              customPrompt = generateOutboundSystemPrompt(customerContext);
+              console.log(`[WebSocket] Outbound call detected for ${sessionId}, using outbound system prompt`);
+            } else {
+              // This is an inbound call - use default inbound system prompt
+              console.log(`[WebSocket] Inbound call detected for ${sessionId}, using default system prompt`);
+            }
+
+            llmService.setup(parsedMessage, customPrompt);
             break;
 
           case "prompt":

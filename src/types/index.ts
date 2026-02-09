@@ -105,3 +105,46 @@ export type ConversationRelayMessage =
   | ErrorMessage
   | TextMessage
   | DtmfMessage;
+
+// Outbound Call Types
+
+/**
+ * Customer context for personalized outbound calls
+ */
+export interface CustomerContext {
+  name?: string;
+  accountNumber?: string;
+  reason?: string;
+  voicemailMessage?: string;
+  [key: string]: any; // Allow additional custom fields
+}
+
+/**
+ * Request to initiate an outbound call
+ */
+export interface OutboundCallRequest {
+  to: string; // E.164 format phone number
+  customerContext?: CustomerContext;
+  voicemailMessage?: string; // Custom voicemail message
+  from?: string; // Optional caller ID override
+}
+
+/**
+ * Response from outbound call initiation
+ */
+export interface OutboundCallResponse {
+  success: boolean;
+  callSid?: string;
+  status: string;
+  message?: string;
+}
+
+/**
+ * AMD status update from Twilio webhook
+ */
+export interface AMDStatusUpdate {
+  CallSid: string;
+  AnsweredBy?: 'human' | 'machine' | 'unknown' | 'fax';
+  CallStatus: string;
+  MachineDetectionDuration?: string;
+}
