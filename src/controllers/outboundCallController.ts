@@ -3,11 +3,15 @@
  * Handles outbound calling with AMD (Answering Machine Detection)
  */
 
-import twilio from 'twilio';
-import { twiml } from 'twilio';
-import { config } from '../config';
-import { OutboundCallRequest, AMDStatusUpdate, CustomerContext } from '../types';
-import { ConversationRelayHelper } from '../helpers/conversationRelayHelper';
+import twilio from "twilio";
+import { twiml } from "twilio";
+import { config } from "../config";
+import {
+  OutboundCallRequest,
+  AMDStatusUpdate,
+  CustomerContext,
+} from "../types";
+import { ConversationRelayHelper } from "../helpers/conversationRelayHelper";
 
 // In-memory storage for customer context
 const customerContextStore = new Map<string, CustomerContext>();
@@ -17,7 +21,10 @@ const customerContextStore = new Map<string, CustomerContext>();
  * @param callSid Call identifier
  * @param context Customer context data
  */
-export function storeCustomerContext(callSid: string, context: CustomerContext): void {
+export function storeCustomerContext(
+  callSid: string,
+  context: CustomerContext,
+): void {
   customerContextStore.set(callSid, context);
   setTimeout(() => customerContextStore.delete(callSid), 60 * 60 * 1000);
 }
@@ -27,7 +34,9 @@ export function storeCustomerContext(callSid: string, context: CustomerContext):
  * @param callSid Call identifier
  * @returns Customer context or undefined
  */
-export function getCustomerContext(callSid: string): CustomerContext | undefined {
+export function getCustomerContext(
+  callSid: string,
+): CustomerContext | undefined {
   return customerContextStore.get(callSid);
 }
 
@@ -59,7 +68,7 @@ export async function initiateOutboundCall(request: OutboundCallRequest) {
 
   if (!callerId) {
     throw new Error(
-      'No caller ID configured. Set OUTBOUND_CALLER_ID, OUTBOUND_FROM, or provide "from" parameter'
+      'No caller ID configured. Set OUTBOUND_CALLER_ID, OUTBOUND_FROM, or provide "from" parameter',
     );
   }
 
@@ -74,20 +83,24 @@ export async function initiateOutboundCall(request: OutboundCallRequest) {
     from: callerId,
     url: answerUrl,
     statusCallback: statusCallbackUrl,
-    statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+    statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
   };
 
   // Add AMD parameters if enabled
   if (config.outbound.enableAMD) {
-    callParams.machineDetection = 'Enable';
+    callParams.machineDetection = "Enable";
     callParams.machineDetectionTimeout = config.outbound.amdTimeout;
-    callParams.machineDetectionSpeechThreshold = config.outbound.amdSpeechThreshold;
-    callParams.machineDetectionSpeechEndThreshold = config.outbound.amdSpeechEndThreshold;
+    callParams.machineDetectionSpeechThreshold =
+      config.outbound.amdSpeechThreshold;
+    callParams.machineDetectionSpeechEndThreshold =
+      config.outbound.amdSpeechEndThreshold;
     callParams.asyncAmd = true; // Use async AMD for better performance
     callParams.asyncAmdStatusCallback = `${baseUrl}/api/outbound-call-amd`;
-    callParams.asyncAmdStatusCallbackMethod = 'POST';
+    callParams.asyncAmdStatusCallbackMethod = "POST";
 
-    console.log(`[Outbound] AMD enabled with timeout ${config.outbound.amdTimeout}ms`);
+    console.log(
+      `[Outbound] AMD enabled with timeout ${config.outbound.amdTimeout}ms`,
+    );
   }
 
   try {
@@ -109,7 +122,7 @@ export async function initiateOutboundCall(request: OutboundCallRequest) {
       status: call.status,
     };
   } catch (error: any) {
-    console.error('[Outbound] Failed to initiate call:', error);
+    console.error("[Outbound] Failed to initiate call:", error);
 
     throw new Error(`Failed to initiate call: ${error.message}`);
   }
@@ -142,14 +155,14 @@ export async function handleAMDStatus(amdData: AMDStatusUpdate): Promise<void> {
   const { CallSid, AnsweredBy, MachineDetectionDuration } = amdData;
 
   console.log(
-    `[AMD] Result for ${CallSid}: ${AnsweredBy} (detection took ${MachineDetectionDuration}ms)`
+    `[AMD] Result for ${CallSid}: ${AnsweredBy} (detection took ${MachineDetectionDuration}ms)`,
   );
 
   // Route based on AMD result
-  if (AnsweredBy === 'human') {
+  if (AnsweredBy === "human") {
     console.log(`[AMD] Human detected, connecting to ConversationRelay`);
     await redirectToConversationRelay(CallSid);
-  } else if (AnsweredBy === 'machine') {
+  } else if (AnsweredBy === "machine") {
     console.log(`[AMD] Machine detected, playing voicemail`);
     await redirectToVoicemail(CallSid);
   } else {
@@ -170,7 +183,7 @@ async function redirectToConversationRelay(callSid: string): Promise<void> {
   try {
     await twilioClient.calls(callSid).update({
       url: twimlUrl,
-      method: 'POST',
+      method: "POST",
     });
 
     console.log(`[Outbound] Redirected ${callSid} to ConversationRelay`);
@@ -190,7 +203,7 @@ async function redirectToVoicemail(callSid: string): Promise<void> {
   try {
     await twilioClient.calls(callSid).update({
       url: twimlUrl,
-      method: 'POST',
+      method: "POST",
     });
 
     console.log(`[Outbound] Redirected ${callSid} to voicemail`);
@@ -205,14 +218,14 @@ async function redirectToVoicemail(callSid: string): Promise<void> {
  * @returns TwiML response
  */
 export async function handleConversationRelayConnect(
-  callData: any
+  callData: any,
 ): Promise<string> {
   const callSid = callData.CallSid;
   const customerContext = getContext(callSid);
 
   console.log(
     `[Outbound] Connecting ${callSid} to ConversationRelay with context:`,
-    customerContext ? 'yes' : 'no'
+    customerContext ? "yes" : "no",
   );
 
   // Generate outbound-specific welcome greeting
@@ -221,16 +234,16 @@ export async function handleConversationRelayConnect(
 
   if (customerContext?.name) {
     // Personalized greeting - AI will confirm identity in next turn
-    welcomeGreeting = `Hello, this is Anna calling from ABC Health System. May I speak with ${customerContext.name}?`;
+    welcomeGreeting = `Hello, this is Anna calling from Owl Health. May I speak with ${customerContext.name}?`;
   } else {
     // Generic outbound greeting (no context)
-    welcomeGreeting = `Hello, this is Anna calling from ABC Health System. I'm trying to reach you regarding your account. Am I speaking with the account holder?`;
+    welcomeGreeting = `Hello, this is Anna calling from Owl Health. I'm trying to reach you regarding your account. Am I speaking with the account holder?`;
   }
 
   // Return ConversationRelay TwiML with outbound greeting
   return ConversationRelayHelper.createConversationRelayResponse(
     undefined, // actionUrl - use default
-    { welcomeGreeting } // relayConfig
+    { welcomeGreeting }, // relayConfig
   );
 }
 
@@ -251,7 +264,7 @@ export async function handleVoicemail(callData: any): Promise<string> {
 
   // Create TwiML response
   const response = new twiml.VoiceResponse();
-  response.say({ voice: 'Polly.Joanna' }, message);
+  response.say({ voice: "Polly.Joanna" }, message);
   response.hangup();
 
   return response.toString();
@@ -264,10 +277,12 @@ export async function handleVoicemail(callData: any): Promise<string> {
 export async function handleCallStatus(statusData: any): Promise<void> {
   const { CallSid, CallStatus, CallDuration } = statusData;
 
-  console.log(`[Outbound] Status update: ${CallSid} - ${CallStatus} - Duration: ${CallDuration || 'N/A'}s`);
+  console.log(
+    `[Outbound] Status update: ${CallSid} - ${CallStatus} - Duration: ${CallDuration || "N/A"}s`,
+  );
 
   // Handle failure states
-  if (['failed', 'busy', 'no-answer'].includes(CallStatus)) {
+  if (["failed", "busy", "no-answer"].includes(CallStatus)) {
     console.warn(`[Outbound] Call ${CallSid} ${CallStatus}`);
   }
 }

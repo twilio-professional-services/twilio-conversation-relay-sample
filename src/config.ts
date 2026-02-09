@@ -6,115 +6,118 @@ import { languageOptions } from "./languageOptions";
 dotenv.config();
 
 // Create a schema for validation
-const configSchema = z.object({
-  // Twilio Configuration
-  TWILIO_ACCOUNT_SID: z.string().min(1, "Twilio Account SID is required"),
-  TWILIO_AUTH_TOKEN: z.string().min(1, "Twilio Auth Token is required"),
-  TWILIO_WORKFLOW_SID: z.string().min(1, "Twilio Workflow SID is required"),
-  USE_CONFERENCE: z
-    .string()
-    .optional()
-    .transform((val) => (val ? val.toLowerCase() === "true" : false))
-    .default("false"),
-  OUTBOUND_TO: z.string().optional(),
-  OUTBOUND_FROM: z.string().optional(),
+const configSchema = z
+  .object({
+    // Twilio Configuration
+    TWILIO_ACCOUNT_SID: z.string().min(1, "Twilio Account SID is required"),
+    TWILIO_AUTH_TOKEN: z.string().min(1, "Twilio Auth Token is required"),
+    TWILIO_WORKFLOW_SID: z.string().min(1, "Twilio Workflow SID is required"),
+    USE_CONFERENCE: z
+      .string()
+      .optional()
+      .transform((val) => (val ? val.toLowerCase() === "true" : false))
+      .default("false"),
+    OUTBOUND_TO: z.string().optional(),
+    OUTBOUND_FROM: z.string().optional(),
 
-  // Outbound Calling & AMD Configuration
-  ENABLE_OUTBOUND_AMD: z
-    .string()
-    .optional()
-    .transform((val) => (val ? val.toLowerCase() === "true" : true))
-    .default("true"),
-  AMD_TIMEOUT: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 5000))
-    .default("5000"),
-  AMD_SPEECH_THRESHOLD: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 2400))
-    .default("2400"),
-  AMD_SPEECH_END_THRESHOLD: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1200))
-    .default("1200"),
-  VOICEMAIL_MESSAGE: z
-    .string()
-    .optional()
-    .default(
-      "Hello, this is ABC Health System. We attempted to reach you. Please call us back at your earliest convenience."
-    ),
-  OUTBOUND_CALLER_ID: z.string().optional(),
+    // Outbound Calling & AMD Configuration
+    ENABLE_OUTBOUND_AMD: z
+      .string()
+      .optional()
+      .transform((val) => (val ? val.toLowerCase() === "true" : true))
+      .default("true"),
+    AMD_TIMEOUT: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : 5000))
+      .default("5000"),
+    AMD_SPEECH_THRESHOLD: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : 2400))
+      .default("2400"),
+    AMD_SPEECH_END_THRESHOLD: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : 1200))
+      .default("1200"),
+    VOICEMAIL_MESSAGE: z
+      .string()
+      .optional()
+      .default(
+        "Hello, this is Owl Health. We attempted to reach you. Please call us back at your earliest convenience.",
+      ),
+    OUTBOUND_CALLER_ID: z.string().optional(),
 
-  // Ngrok Configuration
-  NGROK_DOMAIN: z.string().optional(),
+    // Ngrok Configuration
+    NGROK_DOMAIN: z.string().optional(),
 
-  // Conversation Relay Welcome Greeting
-  WELCOME_GREETING: z.string().optional(),
+    // Conversation Relay Welcome Greeting
+    WELCOME_GREETING: z.string().optional(),
 
-  // Conversation Relay Intelligence Service
-  TWILIO_CONVERSATIONAL_INTELLIGENCE_SERVICE: z.string().optional(),
+    // Conversation Relay Intelligence Service
+    TWILIO_CONVERSATIONAL_INTELLIGENCE_SERVICE: z.string().optional(),
 
-  // Speech Service Configuration
-  SPEECH_KEY: z.string().optional(),
-  SPEECH_REGION: z.string().optional(),
+    // Speech Service Configuration
+    SPEECH_KEY: z.string().optional(),
+    SPEECH_REGION: z.string().optional(),
 
-  // LLM Configuration
-  LLM_PROVIDER: z
-    .enum(["openai", "anthropic", "custom"])
-    .optional()
-    .default("openai"),
-  LLM_MODEL_NAME: z.string().optional(),
-  LLM_TEMPERATURE: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseFloat(val) : undefined)),
-  LLM_MAX_TOKENS: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : undefined)),
-  LLM_STREAMING: z
-    .string()
-    .optional()
-    .transform((val) => (val ? val.toLowerCase() === "true" : undefined)),
+    // LLM Configuration
+    LLM_PROVIDER: z
+      .enum(["openai", "anthropic", "custom"])
+      .optional()
+      .default("openai"),
+    LLM_MODEL_NAME: z.string().optional(),
+    LLM_TEMPERATURE: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseFloat(val) : undefined)),
+    LLM_MAX_TOKENS: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : undefined)),
+    LLM_STREAMING: z
+      .string()
+      .optional()
+      .transform((val) => (val ? val.toLowerCase() === "true" : undefined)),
 
-  // Embedding Configuration
-  EMBEDDING_PROVIDER: z
-    .enum(["openai", "anthropic", "huggingface", "custom"])
-    .optional()
-    .default("openai"),
-  EMBEDDING_MODEL_NAME: z.string().optional(),
-  EMBEDDING_BATCH_SIZE: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : undefined)),
-  EMBEDDING_DIMENSIONS: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : undefined)),
+    // Embedding Configuration
+    EMBEDDING_PROVIDER: z
+      .enum(["openai", "anthropic", "huggingface", "custom"])
+      .optional()
+      .default("openai"),
+    EMBEDDING_MODEL_NAME: z.string().optional(),
+    EMBEDDING_BATCH_SIZE: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : undefined)),
+    EMBEDDING_DIMENSIONS: z
+      .string()
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : undefined)),
 
-  // API Keys
-  OPENAI_API_KEY: z.string().optional(),
-  ANTHROPIC_API_KEY: z.string().optional(),
-  HUGGINGFACEHUB_API_TOKEN: z.string().optional(),
+    // API Keys
+    OPENAI_API_KEY: z.string().optional(),
+    ANTHROPIC_API_KEY: z.string().optional(),
+    HUGGINGFACEHUB_API_TOKEN: z.string().optional(),
 
-  // Optional: Server Port
-  PORT: z.string().optional().default("3000"),
-}).refine(
-  (data) => {
-    // If USE_CONFERENCE is true, OUTBOUND_TO and OUTBOUND_FROM are required
-    if (data.USE_CONFERENCE === "true") {
-      return !!data.OUTBOUND_TO && !!data.OUTBOUND_FROM;
-    }
-    return true;
-  },
-  {
-    message: "OUTBOUND_TO and OUTBOUND_FROM are required when USE_CONFERENCE is true",
-    path: ["OUTBOUND_TO", "OUTBOUND_FROM"],
-  }
-);
+    // Optional: Server Port
+    PORT: z.string().optional().default("3000"),
+  })
+  .refine(
+    (data) => {
+      // If USE_CONFERENCE is true, OUTBOUND_TO and OUTBOUND_FROM are required
+      if (data.USE_CONFERENCE === "true") {
+        return !!data.OUTBOUND_TO && !!data.OUTBOUND_FROM;
+      }
+      return true;
+    },
+    {
+      message:
+        "OUTBOUND_TO and OUTBOUND_FROM are required when USE_CONFERENCE is true",
+      path: ["OUTBOUND_TO", "OUTBOUND_FROM"],
+    },
+  );
 
 // Validate and parse the environment variables
 let parsedConfig: z.infer<typeof configSchema>;
