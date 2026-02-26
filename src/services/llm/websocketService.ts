@@ -93,8 +93,8 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
       llmService.on("streamChatCompletion:complete", (message: any) => {
         const textMessage = {
           type: "text",
-          token: message.content,
-          last: false,
+          token: message.content || "",
+          last: true,
         };
         ws.send(JSON.stringify(textMessage));
       });
