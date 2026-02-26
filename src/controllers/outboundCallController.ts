@@ -214,6 +214,7 @@ async function redirectToVoicemail(callSid: string): Promise<void> {
 
 /**
  * Generates TwiML to connect to ConversationRelay with customer context
+ * Supports both direct mode and conference mode based on USE_CONFERENCE
  * @param callData Webhook data from Twilio
  * @returns TwiML response
  */
@@ -229,7 +230,6 @@ export async function handleConversationRelayConnect(
   );
 
   // Generate outbound-specific welcome greeting
-  // Note: Greeting should just introduce, AI will follow the verification flow in system prompt
   let welcomeGreeting: string;
 
   if (customerContext?.name) {
@@ -239,6 +239,98 @@ export async function handleConversationRelayConnect(
     // Generic outbound greeting (no context)
     welcomeGreeting = `Hello, this is Anna calling from Owl Health. I'm trying to reach you regarding your account. Am I speaking with the account holder?`;
   }
+
+  // Check if conference mode is enabled
+  if (!config.twilio.useConference) {
+    // Direct mode - connect customer directly to ConversationRelay
+    console.log(`[Outbound] Direct mode - connecting ${callSid} directly to ConversationRelay`);
+
+    return ConversationRelayHelper.createConversationRelayResponse(
+      undefined, // actionUrl - use default
+      { welcomeGreeting }, // relayConfig
+    );
+  }
+
+  // Conference mode - place customer in conference and add AI participant
+  console.log(`[Outbound] Conference mode - placing ${callSid} in conference`);
+
+  const conferenceName = `outbound-${callSid}`;
+  const outboundTo = config.twilio.outboundTo!;
+  const outboundFrom = config.twilio.outboundFrom!;
+
+  // Create TwiML to place the customer in a conference
+  const response = new twiml.VoiceResponse();
+  const dial = response.dial();
+  dial.conference(
+    {
+      startConferenceOnEnter: true,
+      endConferenceOnExit: true,
+    },
+    conferenceName,
+  );
+
+  // Store conference name and greeting in context for the AI participant leg
+  // We use a special key with the conference name to retrieve later
+  storeCustomerContext(`conference:${conferenceName}`, {
+    ...customerContext,
+    conferenceName,
+    welcomeGreeting,
+    originalCallSid: callSid,
+  });
+
+  // Add AI participant to the conference
+  // The 'to' parameter (TwiML App or phone) must be configured to call
+  // /api/outbound-conference-leg endpoint
+  try {
+    const participant = await twilioClient
+      .conferences(conferenceName)
+      .participants.create({
+        to: outboundTo, // TwiML App or phone number
+        from: outboundFrom,
+        earlyMedia: true,
+        endConferenceOnExit: false,
+      });
+
+    console.log(
+      `[Outbound] AI participant added: ${participant.callSid} to conference: ${conferenceName}`,
+    );
+  } catch (error: any) {
+    console.error('[Outbound] Failed to add AI participant to conference:', error);
+    // Still return conference TwiML even if participant creation fails
+  }
+
+  return response.toString();
+}
+
+/**
+ * Handles the AI participant leg in outbound conference mode
+ * This endpoint should be configured as the Voice URL for the TwiML App
+ * used for outbound conference calls (different from inbound conference leg)
+ * Returns ConversationRelay TwiML with outbound greeting
+ * @param callData Webhook data from Twilio
+ * @returns TwiML response
+ */
+export async function handleOutboundConferenceLeg(callData: any): Promise<string> {
+  const conferenceName = callData.FriendlyName || callData.ConferenceSid;
+
+  console.log(
+    `[Outbound] AI conference leg answering, conference: ${conferenceName}`,
+  );
+
+  // Try to find context by conference name
+  let customerContext = getCustomerContext(`conference:${conferenceName}`);
+
+  // Fallback: search for context with matching conference name
+  if (!customerContext) {
+    console.log(`[Outbound] Context not found by conference name, searching...`);
+    // This is a simple approach - in production, use proper storage
+  }
+
+  // Get the welcome greeting from stored context
+  const welcomeGreeting = customerContext?.welcomeGreeting ||
+    'Hello, this is Anna calling from Owl Health. I\'m trying to reach you regarding your account.';
+
+  console.log(`[Outbound] Using welcome greeting for AI leg`);
 
   // Return ConversationRelay TwiML with outbound greeting
   return ConversationRelayHelper.createConversationRelayResponse(

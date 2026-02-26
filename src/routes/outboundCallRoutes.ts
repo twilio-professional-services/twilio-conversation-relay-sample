@@ -11,6 +11,7 @@ import {
   handleConversationRelayConnect,
   handleVoicemail,
   handleCallStatus,
+  handleOutboundConferenceLeg,
 } from '../controllers/outboundCallController';
 import { validateTwilioWebhookConditional } from '../middleware/webhookValidation';
 import { PhoneValidator } from '../helpers/phoneValidator';
@@ -178,6 +179,30 @@ router.post(
       console.error('[Webhook] Failed to handle call status:', error);
       res.status(500).json({
         error: 'Failed to handle status update',
+        message: error.message,
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/outbound-conference-leg
+ * Webhook for outbound conference AI participant leg
+ * This is called when the AI participant answers in outbound conference mode
+ * Configure your TwiML App for outbound conferences to point to this endpoint
+ */
+router.post(
+  '/outbound-conference-leg',
+  validateTwilioWebhookConditional,
+  async (req: Request, res: Response) => {
+    try {
+      const twiml = await handleOutboundConferenceLeg(req.body);
+      res.type('text/xml');
+      res.status(200).send(twiml);
+    } catch (error: any) {
+      console.error('[Webhook] Failed to handle outbound conference leg:', error);
+      res.status(500).json({
+        error: 'Failed to handle outbound conference leg',
         message: error.message,
       });
     }

@@ -9,7 +9,7 @@ router.post(
   validateTwilioWebhookConditional,
   async (req: Request, res: Response) => {
     try {
-      const twiml = await handleOutboundLegAnswer();
+      const twiml = await handleOutboundLegAnswer(req.body);
       res.type("text/xml");
       console.log("Outbound leg TwiML:", twiml);
       res.status(200).send(twiml);

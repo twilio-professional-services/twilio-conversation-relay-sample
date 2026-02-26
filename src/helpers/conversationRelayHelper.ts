@@ -38,7 +38,7 @@ export class ConversationRelayHelper {
   public static createConversationRelayResponse(
     actionUrl?: string,
     relayConfig?: ConversationRelayConfig,
-    languages?: LanguageConfig[]
+    languages?: LanguageConfig[],
   ): string {
     const response = new twiml.VoiceResponse();
     const connect = response.connect({
@@ -49,33 +49,42 @@ export class ConversationRelayHelper {
       url: relayConfig?.url || `wss://${config.ngrok.domain}`,
       dtmfDetection: relayConfig?.dtmfDetection ?? true,
       interruptible: relayConfig?.interruptible || "any",
+      language: "en-US",
+      transcriptionProvider: "Google",
+      speechModel: "telephony",
+      // ttsProvider: "google",
+      // voice: "fil-PH-Standard-A",
+      debug: "speaker-events",
+      hints: "yes",
       welcomeGreeting:
         relayConfig?.welcomeGreeting || config.twilio.welcomeGreeting,
     };
 
     // Only add conversationalIntelligenceService if it's configured
-    const conversationalIntelligenceService =
-      relayConfig?.conversationalIntelligenceService ||
-      config.twilio.conversationalIntelligenceService;
-    if (conversationalIntelligenceService) {
-      conversationRelayConfig.conversationalIntelligenceService =
-        conversationalIntelligenceService;
-    }
+    // const conversationalIntelligenceService =
+    //   relayConfig?.conversationalIntelligenceService ||
+    //   config.twilio.conversationalIntelligenceService;
+    // if (conversationalIntelligenceService) {
+    //   conversationRelayConfig.conversationalIntelligenceService =
+    //     conversationalIntelligenceService;
+    // }
 
     const conversationRelay = connect.conversationRelay(
-      conversationRelayConfig
+      conversationRelayConfig,
     );
 
     // Add language configurations
-    const languagesToAdd =
-      languages || ConversationRelayHelper.convertLanguageOptionsToConfig();
-    languagesToAdd.forEach((lang) => {
-      conversationRelay.language({
-        code: lang.code,
-        ttsProvider: lang.ttsProvider,
-        voice: lang.voice,
-      });
-    });
+    // const languagesToAdd =
+    //   languages || ConversationRelayHelper.convertLanguageOptionsToConfig();
+    // languagesToAdd.forEach((lang) => {
+    //   conversationRelay.language({
+    //     code: lang.code,
+    //     ttsProvider: lang.ttsProvider,
+    //     voice: lang.voice,
+    //     transcriptionProvider: "Deepgram", // Default transcription provider
+    //     speechModel: "nova-3-general", // Default speech model
+    //   });
+    // });
 
     return response.toString();
   }
@@ -108,7 +117,7 @@ export class ConversationRelayHelper {
     conferenceName: string,
     outboundTo: string = "+15555551234", // Placeholder
     outboundFrom: string = "+15555554321", // Placeholder
-    answerUrl?: string
+    answerUrl?: string,
   ): string {
     const response = new twiml.VoiceResponse();
 
@@ -119,7 +128,7 @@ export class ConversationRelayHelper {
         startConferenceOnEnter: true,
         endConferenceOnExit: true,
       },
-      conferenceName
+      conferenceName,
     );
 
     // Create a second TwiML response for the outbound dial
@@ -138,13 +147,13 @@ export class ConversationRelayHelper {
   public static createOutboundLegResponse(
     conferenceName?: string,
     relayConfig?: ConversationRelayConfig,
-    languages?: LanguageConfig[]
+    languages?: LanguageConfig[],
   ): string {
     // When the outbound leg answers, connect it to ConversationRelay
     return ConversationRelayHelper.createConversationRelayResponse(
       undefined,
       relayConfig,
-      languages
+      languages,
     );
   }
 }
