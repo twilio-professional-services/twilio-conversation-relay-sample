@@ -58,6 +58,15 @@ export type SetupMessage = {
   callStatus: string;
   accountSid: string;
   applicationSid: string;
+  customParameters?: {
+    client_name?: string;
+    first_name?: string;
+    date?: string;
+    start_time?: string;
+    end_time?: string;
+    occupation?: string;
+    call_direction?: string;
+  };
 };
 
 export type PromptMessage = {

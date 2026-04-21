@@ -11,6 +11,7 @@ const configSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string().min(1, "Twilio Account SID is required"),
   TWILIO_AUTH_TOKEN: z.string().min(1, "Twilio Auth Token is required"),
   TWILIO_WORKFLOW_SID: z.string().min(1, "Twilio Workflow SID is required"),
+  TWILIO_PHONE_NUMBER: z.string().optional(),
   
   // Ngrok Configuration
   NGROK_DOMAIN: z.string().optional(),
@@ -24,13 +25,23 @@ const configSchema = z.object({
   
   // OpenAI Configuration
   OPENAI_API_KEY: z.string().optional(),
-  
+
+  // Anthropic Configuration
+  ANTHROPIC_API_KEY: z.string().optional(),
+
+  // Google AI Configuration
+  GOOGLE_API_KEY: z.string().optional(),
+
+  // LLM Provider Configuration
+  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'google']).optional().default('openai'),
+  LLM_MODEL_NAME: z.string().optional(),
+
   // Optional: Server Port
   PORT: z.string().optional().default('3000')
 });
 
 // Validate and parse the environment variables
-let parsedConfig: { TWILIO_ACCOUNT_SID: string; TWILIO_AUTH_TOKEN: string; TWILIO_WORKFLOW_SID: string; WELCOME_GREETING?: string | undefined; PORT: string; NGROK_DOMAIN?: string | undefined; SPEECH_KEY?: string | undefined; SPEECH_REGION?: string | undefined; OPENAI_API_KEY?: string | undefined; };
+let parsedConfig: { TWILIO_ACCOUNT_SID: string; TWILIO_AUTH_TOKEN: string; TWILIO_WORKFLOW_SID: string; TWILIO_PHONE_NUMBER?: string | undefined; WELCOME_GREETING?: string | undefined; PORT: string; NGROK_DOMAIN?: string | undefined; SPEECH_KEY?: string | undefined; SPEECH_REGION?: string | undefined; OPENAI_API_KEY?: string | undefined; ANTHROPIC_API_KEY?: string | undefined; GOOGLE_API_KEY?: string | undefined; LLM_PROVIDER: "openai" | "anthropic" | "google"; LLM_MODEL_NAME?: string | undefined; };
 
 try {
   parsedConfig = configSchema.parse(process.env);
@@ -48,6 +59,7 @@ export const config = {
     accountSid: parsedConfig.TWILIO_ACCOUNT_SID,
     authToken: parsedConfig.TWILIO_AUTH_TOKEN,
     workflowSid: parsedConfig.TWILIO_WORKFLOW_SID,
+    phoneNumber: parsedConfig.TWILIO_PHONE_NUMBER,
     welcomeGreeting: parsedConfig.WELCOME_GREETING
   },
   ngrok: {
@@ -60,6 +72,16 @@ export const config = {
   openai: {
     apiKey: parsedConfig.OPENAI_API_KEY
   },
+  anthropic: {
+    apiKey: parsedConfig.ANTHROPIC_API_KEY
+  },
+  google: {
+    apiKey: parsedConfig.GOOGLE_API_KEY
+  },
+  llm: {
+    provider: parsedConfig.LLM_PROVIDER,
+    modelName: parsedConfig.LLM_MODEL_NAME
+  },
   server: {
     port: parseInt(parsedConfig.PORT || '3000', 10)
   },
@@ -71,7 +93,9 @@ export function maskSensitiveConfig(config: typeof parsedConfig) {
   return {
     ...config,
     TWILIO_AUTH_TOKEN: config.TWILIO_AUTH_TOKEN.slice(0, 3) + '****',
-    OPENAI_API_KEY: config.OPENAI_API_KEY ? config.OPENAI_API_KEY.slice(0, 5) + '****' : undefined
+    OPENAI_API_KEY: config.OPENAI_API_KEY ? config.OPENAI_API_KEY.slice(0, 5) + '****' : undefined,
+    ANTHROPIC_API_KEY: config.ANTHROPIC_API_KEY ? config.ANTHROPIC_API_KEY.slice(0, 5) + '****' : undefined,
+    GOOGLE_API_KEY: config.GOOGLE_API_KEY ? config.GOOGLE_API_KEY.slice(0, 5) + '****' : undefined,
   };
 }
 

@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 
 import callRoutes from "./routes/callRoutes";
 import connectActionRoutes from "./routes/connectActionRoutes";
+import outboundCallRoutes from "./routes/outboundCallRoutes";
 import { initializeWebSocketHandlers } from "./services/llm/websocketService";
 
 dotenv.config();
@@ -22,6 +23,7 @@ app.use(express.json()); // for parsing application/json
 // Routes
 app.use("/api", callRoutes);
 app.use("/api", connectActionRoutes);
+app.use("/api", outboundCallRoutes);
 
 // Create HTTP server
 const server = http.createServer(app);
