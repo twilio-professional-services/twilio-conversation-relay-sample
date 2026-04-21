@@ -6,16 +6,12 @@ import { BaseMessage, HumanMessage, SystemMessage, AIMessage, ToolMessage } from
 import { systemPrompt, outboundSystemPrompt } from "../../prompts/systemPrompt";
 import { EventEmitter } from "events";
 import {
-  verifyUser,
-  checkPendingBill,
   humanAgentHandoff,
   toolDefinitions,
   LLMToolDefinition,
-  checkHsaAccount,
-  checkPaymentOptions,
   switchLanguage,
-  collectPhoneNumber,
-  searchKnowledgeBase,
+  confirmShiftBid,
+  endCall,
 } from "./tools";
 import { StateManager, LLMServiceState } from "./stateManager";
 
@@ -346,14 +342,10 @@ You must use these exact details when presenting the shift offer.`;
       const { name, arguments: args } = toolCall.function;
 
       const toolFunctionMap: Record<string, (params: any) => Promise<any>> = {
-        verify_user_identity: verifyUser,
-        collect_phone_number: collectPhoneNumber,
-        check_pending_bill: checkPendingBill,
-        search_knowledge_base: searchKnowledgeBase,
         human_agent_handoff: humanAgentHandoff,
-        check_hsa_account: checkHsaAccount,
-        check_payment_options: checkPaymentOptions,
         switch_language: switchLanguage,
+        confirm_shift_bid: confirmShiftBid,
+        end_call: endCall,
       };
 
       const toolFunction = toolFunctionMap[name];
@@ -362,16 +354,17 @@ You must use these exact details when presenting the shift offer.`;
         throw new Error(`Tool ${name} not implemented`);
       }
 
-      const parsedArgs = typeof args === "string" ? JSON.parse(args) : args;
+      const parsedArgs = typeof args === "string"
+        ? (args.trim() === "" ? {} : JSON.parse(args))
+        : (args || {});
       const result = await toolFunction(parsedArgs);
 
       if (name === "human_agent_handoff") {
         this.emit("humanAgentHandoff", parsedArgs);
       } else if (name === "switch_language") {
         this.emit("switchLanguage", parsedArgs);
-      }
-      if (name === "collect_phone_number") {
-        this.emit("dtmfInput", "phoneNumber");
+      } else if (name === "end_call") {
+        this.emit("endCall", parsedArgs);
       }
 
       return typeof result === "string" ? result : JSON.stringify(result);

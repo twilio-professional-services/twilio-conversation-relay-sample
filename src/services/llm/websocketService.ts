@@ -48,7 +48,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
         console.log(`Creating new session ${sessionId}`);
         llmService = new LLMService(
           config.llm.provider as "openai" | "anthropic" | "google",
-          config.llm.modelName
+          config.llm.modelName,
         );
         dtmfHelper = new DTMFHelper();
         idleTimer = new IdleTimer(10000, dtmfHelper); // 10 seconds timeout
@@ -68,7 +68,9 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
       idleTimer.on("idleTimeout", (data) => {
         console.log("Idle timer expired. Resetting state.");
         llmService.streamChatCompletion([
-          new HumanMessage("dtmf input was not received. please reprompt the user."),
+          new HumanMessage(
+            "dtmf input was not received. please reprompt the user.",
+          ),
         ]);
         dtmfHelper.resetState(); // Reset DTMF state
       });
@@ -132,6 +134,21 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
         console.log("Switch Language", languageMessage);
         ws.send(JSON.stringify(languageMessage));
       });
+
+      llmService.on("endCall", (message: any) => {
+        console.log("End Call requested", message);
+
+        // Send a disconnect message to Twilio to end the call
+        const endMessage = {
+          type: "end",
+          handoffData: JSON.stringify({
+            reason: message.reason,
+            callEnded: true,
+          }),
+        };
+
+        ws.send(JSON.stringify(endMessage));
+      });
     };
 
     ws.on("message", (message: string) => {
@@ -150,13 +167,13 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
           case "prompt":
             if (!llmService) {
               console.error(
-                "LLMService not initialized. Setup message required first."
+                "LLMService not initialized. Setup message required first.",
               );
               ws.send(
                 JSON.stringify({
                   type: "error",
                   message: "Session not initialized",
-                })
+                }),
               );
               return;
             }
@@ -205,7 +222,7 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
           JSON.stringify({
             type: "error",
             message: "Invalid message format",
-          })
+          }),
         );
       }
     });
@@ -224,15 +241,20 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
       }
 
       // Clean up session after a delay to allow for reconnection
-      setTimeout(() => {
-        if (currentSessionId && activeSessions.has(currentSessionId)) {
-          console.log(`Cleaning up session ${currentSessionId} after timeout`);
-          activeSessions.delete(currentSessionId);
-          if (llmService) {
-            llmService.clearState();
+      setTimeout(
+        () => {
+          if (currentSessionId && activeSessions.has(currentSessionId)) {
+            console.log(
+              `Cleaning up session ${currentSessionId} after timeout`,
+            );
+            activeSessions.delete(currentSessionId);
+            if (llmService) {
+              llmService.clearState();
+            }
           }
-        }
-      }, 5 * 60 * 1000); // 5 minute grace period for reconnection
+        },
+        5 * 60 * 1000,
+      ); // 5 minute grace period for reconnection
     });
 
     ws.on("error", (error) => {
