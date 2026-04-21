@@ -23,7 +23,7 @@ export async function handleIncomingCall(
   const conversationRelay = connect.conversationRelay({
     url: `wss://${config.ngrok.domain}`,
     dtmfDetection: true,
-    interruptByDtmf: false,
+    interruptible: "speech" as any,
     welcomeGreeting: config.twilio.welcomeGreeting,
   });
 
