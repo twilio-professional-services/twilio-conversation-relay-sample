@@ -5,14 +5,14 @@ const router = express.Router();
 
 router.post('/outbound-call', async (req: Request, res: Response) => {
   try {
-    const { to, from, client_name, first_name, date, start_time, end_time, occupation } = req.body as OutboundCallRequest;
+    const { to, from, clientName, firstName, date, startTime, endTime, occupation } = req.body as OutboundCallRequest;
 
     if (!to) {
       res.status(400).json({ error: 'Destination phone number (to) is required' });
       return;
     }
 
-    const requiredFields = { client_name, first_name, date, start_time, end_time, occupation };
+    const requiredFields = { clientName, firstName, date, startTime, endTime, occupation };
     const missingFields = Object.entries(requiredFields)
       .filter(([_, value]) => !value)
       .map(([key]) => key);
@@ -25,7 +25,7 @@ router.post('/outbound-call', async (req: Request, res: Response) => {
       return;
     }
 
-    const result = await initiateOutboundCall({ to, from, client_name, first_name, date, start_time, end_time, occupation });
+    const result = await initiateOutboundCall({ to, from, clientName, firstName, date, startTime, endTime, occupation });
 
     res.status(200).json({
       success: true,
