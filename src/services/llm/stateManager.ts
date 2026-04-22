@@ -4,6 +4,7 @@ export interface LLMServiceState {
   sessionId: string;
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
   userInterrupted?: boolean;
+  currentLanguage?: string;
   timestamp: number;
 }
 
@@ -25,14 +26,14 @@ export class StateManager {
       ...state,
       timestamp: Date.now(),
     });
-    
+
     // Clean up old states
     this.cleanupOldStates();
   }
 
   restoreState(sessionId: string): LLMServiceState | null {
     const state = this.sessionStates.get(sessionId);
-    
+
     if (!state) {
       console.log(`No saved state found for session ${sessionId}`);
       return null;

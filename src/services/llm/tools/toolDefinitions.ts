@@ -1,5 +1,3 @@
-import { userInfo } from "os";
-
 export interface LLMToolDefinition {
   type: "function";
   function: {
@@ -26,7 +24,7 @@ export const toolDefinitions: LLMToolDefinition[] = [
           targetLanguage: {
             type: "string",
             description:
-              'The target language to switch to. SHOULD BE ONE OF THE FOLLOWING: ["english","spanish"]',
+              'The target language to switch to. SHOULD BE ONE OF THE FOLLOWING: ["english","spanish", "french"]',
           },
         },
         required: ["targetLanguage"],
@@ -81,13 +79,11 @@ export const toolDefinitions: LLMToolDefinition[] = [
           },
           context: {
             type: "string",
-            description:
-              "Brief context about what the caller is asking for.",
+            description: "Brief context about what the caller is asking for.",
           },
           summary: {
             type: "string",
-            description:
-              "A brief summary of the conversation so far.",
+            description: "A brief summary of the conversation so far.",
           },
         },
         required: ["reason", "context", "summary"],

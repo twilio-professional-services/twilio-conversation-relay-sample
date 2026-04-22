@@ -118,8 +118,8 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
       });
 
       llmService.on("switchLanguage", (message: any) => {
-        const languageCode =
-          config.languages[message.targetLanguage]?.locale_code;
+        const normalizedLanguage = message.targetLanguage?.trim().toLowerCase();
+        const languageCode = config.languages[normalizedLanguage]?.locale_code;
         if (!languageCode) {
           console.info("Language not supported");
           return;
@@ -162,6 +162,29 @@ export function initializeWebSocketHandlers(wss: WebSocketServer) {
             const sessionId = parsedMessage.callSid;
             initializeSession(sessionId);
             llmService.setup(parsedMessage);
+
+            // Extract default language from setup message (defaults to 'english')
+            const defaultLanguage = parsedMessage.defaultLanguage || "english";
+
+            // Send default language to client
+            const defaultLanguageCode =
+              config.languages[defaultLanguage]?.locale_code;
+            if (defaultLanguageCode) {
+              const defaultLanguageMessage = {
+                type: "language",
+                ttsLanguage: defaultLanguageCode,
+                transcriptionLanguage: defaultLanguageCode,
+              };
+              console.log("Default Language Set", defaultLanguageMessage);
+              ws.send(JSON.stringify(defaultLanguageMessage));
+            }
+
+            // Trigger the initial greeting
+            llmService.streamChatCompletion([
+              new HumanMessage(
+                "Start the conversation with the initial greeting.",
+              ),
+            ]);
             break;
 
           case "prompt":

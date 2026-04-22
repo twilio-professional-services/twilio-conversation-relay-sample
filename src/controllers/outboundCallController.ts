@@ -12,12 +12,25 @@ export interface OutboundCallRequest {
   startTime: string;
   endTime: string;
   occupation: string;
+  language: string;
 }
 
 export async function initiateOutboundCall(
   request: OutboundCallRequest,
 ): Promise<{ callSid: string; status: string }> {
-  const { to, from, clientName, firstName, date, startTime, endTime, occupation } = request;
+  const {
+    to,
+    from,
+    clientName,
+    firstName,
+    date,
+    startTime,
+    endTime,
+    occupation,
+    language,
+  } = request;
+
+  console.log("Initiating outbound call with parameters:", request);
 
   if (!to) {
     throw new Error("Destination phone number (to) is required");
@@ -42,6 +55,7 @@ export async function initiateOutboundCall(
     url: `wss://${config.ngrok.domain}`,
     dtmfDetection: true,
     interruptByDtmf: false,
+    language: language ? language : "en-US",
   });
 
   conversationRelay.parameter({
@@ -80,9 +94,9 @@ export async function initiateOutboundCall(
   });
 
   conversationRelay.language({
-    code: "es-US",
+    code: "fr-CA",
     ttsProvider: "ElevenLabs",
-    voice: "h415g7h7bSwQrn1qw4ar",
+    voice: "K7gx0ylJdff0yjM2uVQS",
   });
 
   conversationRelay.language({

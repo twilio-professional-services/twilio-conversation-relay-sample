@@ -21,6 +21,12 @@ export const languageOptions: { [key: string]: LanguageOption } = {
     transcriptionProvider: "google",
     speechModel: "telephony",
   },
+
+  french: {
+    locale_code: "fr-CA",
+    ttsProvider: "elevenlabs",
+    voice: "K7gx0ylJdff0yjM2uVQS",
+  },
 };
 
 // Other examples of language options:

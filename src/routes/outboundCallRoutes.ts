@@ -1,44 +1,76 @@
-import express, { Request, Response } from 'express';
-import { initiateOutboundCall, OutboundCallRequest } from '../controllers/outboundCallController';
+import express, { Request, Response } from "express";
+import {
+  initiateOutboundCall,
+  OutboundCallRequest,
+} from "../controllers/outboundCallController";
 
 const router = express.Router();
 
-router.post('/outbound-call', async (req: Request, res: Response) => {
+router.post("/outbound-call", async (req: Request, res: Response) => {
   try {
-    const { to, from, clientName, firstName, date, startTime, endTime, occupation } = req.body as OutboundCallRequest;
+    const {
+      to,
+      from,
+      clientName,
+      firstName,
+      date,
+      startTime,
+      endTime,
+      occupation,
+      language,
+    } = req.body as OutboundCallRequest;
 
     if (!to) {
-      res.status(400).json({ error: 'Destination phone number (to) is required' });
+      res
+        .status(400)
+        .json({ error: "Destination phone number (to) is required" });
       return;
     }
 
-    const requiredFields = { clientName, firstName, date, startTime, endTime, occupation };
+    const requiredFields = {
+      clientName,
+      firstName,
+      date,
+      startTime,
+      endTime,
+      occupation,
+      language,
+    };
     const missingFields = Object.entries(requiredFields)
       .filter(([_, value]) => !value)
       .map(([key]) => key);
 
     if (missingFields.length > 0) {
       res.status(400).json({
-        error: 'Missing required fields',
-        missing: missingFields
+        error: "Missing required fields",
+        missing: missingFields,
       });
       return;
     }
 
-    const result = await initiateOutboundCall({ to, from, clientName, firstName, date, startTime, endTime, occupation });
-
+    const result = await initiateOutboundCall({
+      to,
+      from,
+      clientName,
+      firstName,
+      date,
+      startTime,
+      endTime,
+      occupation,
+      language,
+    });
     res.status(200).json({
       success: true,
       callSid: result.callSid,
       status: result.status,
-      message: 'Outbound call initiated successfully',
+      message: "Outbound call initiated successfully",
     });
   } catch (error) {
-    console.error('Error initiating outbound call:', error);
+    console.error("Error initiating outbound call:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to initiate outbound call',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      error: "Failed to initiate outbound call",
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });

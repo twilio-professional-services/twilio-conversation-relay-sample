@@ -2,7 +2,13 @@ import { ChatOpenAI, AzureChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { BaseMessage, HumanMessage, SystemMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
+import {
+  BaseMessage,
+  HumanMessage,
+  SystemMessage,
+  AIMessage,
+  ToolMessage,
+} from "@langchain/core/messages";
 import { systemPrompt, outboundSystemPrompt } from "../../prompts/systemPrompt";
 import { EventEmitter } from "events";
 import {
@@ -14,6 +20,7 @@ import {
   endCall,
 } from "./tools";
 import { StateManager, LLMServiceState } from "./stateManager";
+import { config } from "../../config";
 
 type LLMProvider = "openai" | "anthropic" | "google" | "azure-openai";
 
@@ -41,7 +48,10 @@ export class LLMService extends EventEmitter {
     this.stateManager = StateManager.getInstance();
   }
 
-  private initializeModel(provider: LLMProvider, modelName?: string): BaseChatModel {
+  private initializeModel(
+    provider: LLMProvider,
+    modelName?: string,
+  ): BaseChatModel {
     switch (provider) {
       case "anthropic":
         return new ChatAnthropic({
@@ -58,11 +68,14 @@ export class LLMService extends EventEmitter {
       case "azure-openai":
         return new AzureChatOpenAI({
           azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
-          azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME || modelName,
-          azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION || "2024-04-01-preview",
+          azureOpenAIApiDeploymentName:
+            process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME || modelName,
+          azureOpenAIApiVersion:
+            process.env.AZURE_OPENAI_API_VERSION || "2024-04-01-preview",
           // Support both endpoint and instance name patterns
           azureOpenAIEndpoint: process.env.AZURE_OPENAI_ENDPOINT,
-          azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
+          azureOpenAIApiInstanceName:
+            process.env.AZURE_OPENAI_API_INSTANCE_NAME,
           temperature: 0.7,
           streaming: true,
         });
@@ -97,8 +110,8 @@ export class LLMService extends EventEmitter {
       this._userInterrupted = savedState.userInterrupted;
       this.messages.push(
         new SystemMessage(
-          "Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request."
-        )
+          "Notice: The connection was disconnected and has now been restored. If the user's last message is unclear or incomplete, please politely ask the user to repeat or clarify their request.",
+        ),
       );
       console.log(`State restored for session ${sessionId}`);
       this.chatCompletion(this.messages);
@@ -115,7 +128,7 @@ export class LLMService extends EventEmitter {
 
   async chatCompletion(
     messages: BaseMessage[],
-    tools?: LLMToolDefinition[]
+    tools?: LLMToolDefinition[],
   ): Promise<BaseMessage> {
     try {
       // Add incoming messages to the conversation history
@@ -123,14 +136,17 @@ export class LLMService extends EventEmitter {
 
       // Bind tools if provided
       const modelWithTools = tools
-        ? this.model.bind({ tools: this.convertToolsToLangChain(tools) })
+        ? this.model.bind({ tools: this.convertToolsToLangChain(tools) } as any)
         : this.model;
 
       // Get completion
       const response = await modelWithTools.invoke(this.messages);
 
       // Check if there are tool calls
-      if (response.additional_kwargs?.tool_calls && response.additional_kwargs.tool_calls.length > 0) {
+      if (
+        response.additional_kwargs?.tool_calls &&
+        response.additional_kwargs.tool_calls.length > 0
+      ) {
         // Add AI message with tool calls to history
         this.messages.push(response);
 
@@ -144,7 +160,10 @@ export class LLMService extends EventEmitter {
                 tool_call_id: toolCall.id,
               });
             } catch (error) {
-              console.error(`Tool call ${toolCall.function.name} failed:`, error);
+              console.error(
+                `Tool call ${toolCall.function.name} failed:`,
+                error,
+              );
               return new ToolMessage({
                 content: `Error executing tool: ${
                   error instanceof Error ? error.message : "Unknown error"
@@ -152,7 +171,7 @@ export class LLMService extends EventEmitter {
                 tool_call_id: toolCall.id,
               });
             }
-          })
+          }),
         );
 
         // Add tool results to messages
@@ -176,8 +195,8 @@ export class LLMService extends EventEmitter {
 
   async streamChatCompletion(
     messages: BaseMessage[],
-    tools?: LLMToolDefinition[]
-  ) {
+    tools?: LLMToolDefinition[],
+  ): Promise<void> {
     try {
       this.messages.push(...messages);
 
@@ -185,12 +204,14 @@ export class LLMService extends EventEmitter {
 
       // Bind tools if provided
       const modelWithTools = tools
-        ? this.model.bind({ tools: this.convertToolsToLangChain(tools) })
-        : this.model.bind({ tools: this.convertToolsToLangChain(toolDefinitions) });
+        ? this.model.bind({ tools: this.convertToolsToLangChain(tools) } as any)
+        : this.model.bind({
+            tools: this.convertToolsToLangChain(toolDefinitions),
+          } as any);
 
       const stream = await modelWithTools.stream(this.messages);
 
-      const toolCalls: any[] = [];
+      const toolCallsByIndex = new Map<number, any>();
       let llmResponse = "";
       let aiMessageWithTools: AIMessage | null = null;
 
@@ -206,12 +227,40 @@ export class LLMService extends EventEmitter {
         // Check for tool calls in chunk
         if (chunk.additional_kwargs?.tool_calls) {
           chunk.additional_kwargs.tool_calls.forEach((toolCall: any) => {
+            const index =
+              typeof toolCall.index === "number"
+                ? toolCall.index
+                : toolCallsByIndex.size;
+
+            const existing = toolCallsByIndex.get(index) || {
+              id: toolCall.id,
+              type: toolCall.type || "function",
+              function: {
+                name: "",
+                arguments: "",
+              },
+            };
+
             if (toolCall.id) {
-              toolCalls.push(toolCall);
+              existing.id = toolCall.id;
             }
+
+            if (toolCall.function?.name) {
+              existing.function.name = toolCall.function.name;
+            }
+
+            if (typeof toolCall.function?.arguments === "string") {
+              existing.function.arguments += toolCall.function.arguments;
+            }
+
+            toolCallsByIndex.set(index, existing);
           });
         }
       }
+
+      const toolCalls = Array.from(toolCallsByIndex.values()).filter(
+        (toolCall: any) => toolCall.id && toolCall.function?.name,
+      );
 
       // Check if we have tool calls to process
       if (toolCalls.length > 0) {
@@ -234,7 +283,10 @@ export class LLMService extends EventEmitter {
                 tool_call_id: toolCall.id,
               });
             } catch (error) {
-              console.error(`Tool call ${toolCall.function.name} failed:`, error);
+              console.error(
+                `Tool call ${toolCall.function.name} failed:`,
+                error,
+              );
               return new ToolMessage({
                 content: `Error executing tool: ${
                   error instanceof Error ? error.message : "Unknown error"
@@ -242,7 +294,7 @@ export class LLMService extends EventEmitter {
                 tool_call_id: toolCall.id,
               });
             }
-          })
+          }),
         );
 
         // Add tool results to messages
@@ -268,6 +320,9 @@ export class LLMService extends EventEmitter {
     if (message.callSid) {
       this.sessionId = message.callSid;
 
+      // Extract default language from setup message (defaults to 'english')
+      const defaultLanguage = message.defaultLanguage || "english";
+
       // Try to restore previous state for reconnection
       const restored = this.restoreState(message.callSid);
       if (!restored) {
@@ -281,19 +336,29 @@ export class LLMService extends EventEmitter {
 
           // Replace placeholders in the outbound system prompt
           const customizedPrompt = outboundSystemPrompt
-            .replace(/\[CLIENT_NAME\]/g, customParams.client_name || "the organization")
+            .replace(
+              /\[CLIENT_NAME\]/g,
+              customParams.client_name || "the organization",
+            )
             .replace(/\[FIRST_NAME\]/g, customParams.first_name || "there")
             .replace(/\[Date\]/g, customParams.date || "the scheduled date")
-            .replace(/\[Start Time\]/g, customParams.start_time || "the start time")
+            .replace(
+              /\[Start Time\]/g,
+              customParams.start_time || "the start time",
+            )
             .replace(/\[End Time\]/g, customParams.end_time || "the end time")
-            .replace(/\[Occupation\]/g, customParams.occupation || "the position");
+            .replace(
+              /\[Occupation\]/g,
+              customParams.occupation || "the position",
+            )
+            .replace(/\[DEFAULT_LANGUAGE\]/g, defaultLanguage);
 
           // Add today's date and shift details as context
-          const today = new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+          const today = new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
           });
 
           const contextMessage = `CURRENT DATE: ${today}
@@ -312,24 +377,24 @@ You must use these exact details when presenting the shift offer.`;
             new SystemMessage(customizedPrompt),
             new SystemMessage(contextMessage),
           ];
-
-          // Trigger the initial greeting
-          this.streamChatCompletion([
-            new HumanMessage("Start the conversation with the initial greeting."),
-          ]);
         } else {
           // Inbound call - use default system prompt
           console.log("Inbound call detected");
 
-          const today = new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+          const today = new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
           });
 
+          const inboundPrompt = systemPrompt.replace(
+            /\[DEFAULT_LANGUAGE\]/g,
+            defaultLanguage,
+          );
+
           this.messages = [
-            new SystemMessage(systemPrompt),
+            new SystemMessage(inboundPrompt),
             new SystemMessage(`CURRENT DATE: ${today}`),
           ];
         }
@@ -365,9 +430,12 @@ You must use these exact details when presenting the shift offer.`;
         throw new Error(`Tool ${name} not implemented`);
       }
 
-      const parsedArgs = typeof args === "string"
-        ? (args.trim() === "" ? {} : JSON.parse(args))
-        : (args || {});
+      const parsedArgs =
+        typeof args === "string"
+          ? args.trim() === ""
+            ? {}
+            : JSON.parse(args)
+          : args || {};
       const result = await toolFunction(parsedArgs);
 
       if (name === "human_agent_handoff") {
