@@ -33,6 +33,7 @@ const configSchema = z.object({
   AZURE_OPENAI_API_INSTANCE_NAME: z.string().optional(),
   AZURE_OPENAI_API_DEPLOYMENT_NAME: z.string().optional(),
   AZURE_OPENAI_API_VERSION: z.string().optional(),
+  AZURE_OPENAI_ENDPOINT: z.string().optional(),
 
   // LLM Provider Configuration
   LLM_PROVIDER: z.enum(['openai', 'anthropic', 'google', 'azure-openai']).optional().default('openai'),
@@ -43,7 +44,7 @@ const configSchema = z.object({
 });
 
 // Validate and parse the environment variables
-let parsedConfig: { TWILIO_ACCOUNT_SID: string; TWILIO_AUTH_TOKEN: string; TWILIO_WORKFLOW_SID: string; TWILIO_PHONE_NUMBER?: string | undefined; WELCOME_GREETING?: string | undefined; PORT: string; NGROK_DOMAIN?: string | undefined; OPENAI_API_KEY?: string | undefined; ANTHROPIC_API_KEY?: string | undefined; GOOGLE_API_KEY?: string | undefined; AZURE_OPENAI_API_KEY?: string | undefined; AZURE_OPENAI_API_INSTANCE_NAME?: string | undefined; AZURE_OPENAI_API_DEPLOYMENT_NAME?: string | undefined; AZURE_OPENAI_API_VERSION?: string | undefined; LLM_PROVIDER: "openai" | "anthropic" | "google" | "azure-openai"; LLM_MODEL_NAME?: string | undefined; };
+let parsedConfig: { TWILIO_ACCOUNT_SID: string; TWILIO_AUTH_TOKEN: string; TWILIO_WORKFLOW_SID: string; TWILIO_PHONE_NUMBER?: string | undefined; WELCOME_GREETING?: string | undefined; PORT: string; NGROK_DOMAIN?: string | undefined; OPENAI_API_KEY?: string | undefined; ANTHROPIC_API_KEY?: string | undefined; GOOGLE_API_KEY?: string | undefined; AZURE_OPENAI_API_KEY?: string | undefined; AZURE_OPENAI_API_INSTANCE_NAME?: string | undefined; AZURE_OPENAI_API_DEPLOYMENT_NAME?: string | undefined; AZURE_OPENAI_API_VERSION?: string | undefined; AZURE_OPENAI_ENDPOINT?: string | undefined; LLM_PROVIDER: "openai" | "anthropic" | "google" | "azure-openai"; LLM_MODEL_NAME?: string | undefined; };
 
 try {
   parsedConfig = configSchema.parse(process.env);
@@ -80,7 +81,8 @@ export const config = {
     apiKey: parsedConfig.AZURE_OPENAI_API_KEY,
     instanceName: parsedConfig.AZURE_OPENAI_API_INSTANCE_NAME,
     deploymentName: parsedConfig.AZURE_OPENAI_API_DEPLOYMENT_NAME,
-    apiVersion: parsedConfig.AZURE_OPENAI_API_VERSION
+    apiVersion: parsedConfig.AZURE_OPENAI_API_VERSION,
+    endpoint: parsedConfig.AZURE_OPENAI_ENDPOINT
   },
   llm: {
     provider: parsedConfig.LLM_PROVIDER,

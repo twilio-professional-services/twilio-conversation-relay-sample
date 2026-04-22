@@ -64,9 +64,10 @@ Once created, open `.env` in your code editor. You are required to set the follo
 | `LLM_MODEL_NAME` | Model name override (uses provider defaults if not set)<br>• OpenAI: `gpt-3.5-turbo`<br>• Anthropic: `claude-haiku-4-5-20251001`<br>• Google: `gemini-2.0-flash-001`<br>• Azure OpenAI: Your deployment name | Provider default |
 | `LLM_TEMPERATURE` | LLM temperature setting | `0.9` |
 | `LLM_MAX_TOKENS` | LLM max tokens | `1000` |
-| `AZURE_OPENAI_API_INSTANCE_NAME` | Azure OpenAI instance name (required if using azure-openai) | `your-instance-name` |
-| `AZURE_OPENAI_API_DEPLOYMENT_NAME` | Azure OpenAI deployment name (required if using azure-openai) | `your-deployment-name` |
-| `AZURE_OPENAI_API_VERSION` | Azure OpenAI API version | `2024-02-15-preview` |
+| `AZURE_OPENAI_API_DEPLOYMENT_NAME` | Azure OpenAI deployment name (required if using azure-openai) | `gpt-4o-mini-deployment` |
+| `AZURE_OPENAI_API_VERSION` | Azure OpenAI API version | `2024-04-01-preview` |
+| `AZURE_OPENAI_ENDPOINT` | Full Azure OpenAI endpoint URL (use this OR instance name) | `https://your-resource.cognitiveservices.azure.com/` |
+| `AZURE_OPENAI_API_INSTANCE_NAME` | Azure OpenAI instance name (alternative to endpoint) | `your-instance-name` |
 
 5. In the Twilio Console, go to Phone Numbers > Manage > Active Numbers and select an existing phone number (or Buy a number). In your Phone Number configuration settings, update the first A call comes in dropdown to Webhook and set the URL to https://[your-ngrok-domain].ngrok.app/api/incoming-call, ensure HTTP is set to HTTP POST, and click Save configuration.
 

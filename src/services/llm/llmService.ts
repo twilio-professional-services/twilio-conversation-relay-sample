@@ -1,4 +1,4 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatOpenAI, AzureChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
@@ -56,11 +56,13 @@ export class LLMService extends EventEmitter {
           temperature: 0.7,
         });
       case "azure-openai":
-        return new ChatOpenAI({
+        return new AzureChatOpenAI({
           azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
-          azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
           azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME || modelName,
-          azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview",
+          azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION || "2024-04-01-preview",
+          // Support both endpoint and instance name patterns
+          azureOpenAIEndpoint: process.env.AZURE_OPENAI_ENDPOINT,
+          azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
           temperature: 0.7,
           streaming: true,
         });
