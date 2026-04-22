@@ -15,7 +15,7 @@ import {
 } from "./tools";
 import { StateManager, LLMServiceState } from "./stateManager";
 
-type LLMProvider = "openai" | "anthropic" | "google";
+type LLMProvider = "openai" | "anthropic" | "google" | "azure-openai";
 
 export class LLMService extends EventEmitter {
   private model: BaseChatModel;
@@ -54,6 +54,15 @@ export class LLMService extends EventEmitter {
           apiKey: process.env.GOOGLE_API_KEY,
           model: modelName || "gemini-2.0-flash-001", // Latest stable Gemini Flash model
           temperature: 0.7,
+        });
+      case "azure-openai":
+        return new ChatOpenAI({
+          azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
+          azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
+          azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME || modelName,
+          azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview",
+          temperature: 0.7,
+          streaming: true,
         });
       case "openai":
       default:

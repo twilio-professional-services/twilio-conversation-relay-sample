@@ -51,8 +51,8 @@ Once created, open `.env` in your code editor. You are required to set the follo
 | `TWILIO_AUTH_TOKEN` | Your Twilio Auth Token from the Twilio Console | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 | `TWILIO_WORKFLOW_SID` | The Taskrouter Workflow SID for enqueuing calls with Flex agents. Found in: TaskRouter > Workspaces > Flex Task Assignment > Workflows | `WWXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX` |
 | `NGROK_DOMAIN` | The forwarding URL of your ngrok tunnel | `your-domain.ngrok.dev` |
-| `LLM_PROVIDER` | LLM provider to use: `openai`, `anthropic`, or `google` | `openai` |
-| API Key (provider-specific) | **OpenAI**: `OPENAI_API_KEY`<br>**Anthropic**: `ANTHROPIC_API_KEY`<br>**Google**: `GOOGLE_API_KEY` | `sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `LLM_PROVIDER` | LLM provider to use: `openai`, `anthropic`, `google`, or `azure-openai` | `openai` |
+| API Key (provider-specific) | **OpenAI**: `OPENAI_API_KEY`<br>**Anthropic**: `ANTHROPIC_API_KEY`<br>**Google**: `GOOGLE_API_KEY`<br>**Azure OpenAI**: `AZURE_OPENAI_API_KEY` | `sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 
 ### Optional Variables
 | Variable Name | Description | Default Value |
@@ -61,9 +61,12 @@ Once created, open `.env` in your code editor. You are required to set the follo
 | `TWILIO_PHONE_NUMBER` | Your Twilio phone number for outbound calls (can be passed in API request) | - |
 | `TWILIO_CONVERSATIONAL_INTELLIGENCE_SERVICE` | Twilio Conversational Intelligence Service SID | - |
 | `WELCOME_GREETING` | The message automatically played to the caller | `"Thanks for calling. How can I help you today?"` |
-| `LLM_MODEL_NAME` | Model name override (uses provider defaults if not set)<br>• OpenAI: `gpt-3.5-turbo`<br>• Anthropic: `claude-haiku-4-5-20251001`<br>• Google: `gemini-2.0-flash-001` | Provider default |
+| `LLM_MODEL_NAME` | Model name override (uses provider defaults if not set)<br>• OpenAI: `gpt-3.5-turbo`<br>• Anthropic: `claude-haiku-4-5-20251001`<br>• Google: `gemini-2.0-flash-001`<br>• Azure OpenAI: Your deployment name | Provider default |
 | `LLM_TEMPERATURE` | LLM temperature setting | `0.9` |
 | `LLM_MAX_TOKENS` | LLM max tokens | `1000` |
+| `AZURE_OPENAI_API_INSTANCE_NAME` | Azure OpenAI instance name (required if using azure-openai) | `your-instance-name` |
+| `AZURE_OPENAI_API_DEPLOYMENT_NAME` | Azure OpenAI deployment name (required if using azure-openai) | `your-deployment-name` |
+| `AZURE_OPENAI_API_VERSION` | Azure OpenAI API version | `2024-02-15-preview` |
 
 5. In the Twilio Console, go to Phone Numbers > Manage > Active Numbers and select an existing phone number (or Buy a number). In your Phone Number configuration settings, update the first A call comes in dropdown to Webhook and set the URL to https://[your-ngrok-domain].ngrok.app/api/incoming-call, ensure HTTP is set to HTTP POST, and click Save configuration.
 

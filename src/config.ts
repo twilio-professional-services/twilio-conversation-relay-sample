@@ -28,8 +28,14 @@ const configSchema = z.object({
   // Google AI Configuration
   GOOGLE_API_KEY: z.string().optional(),
 
+  // Azure OpenAI Configuration
+  AZURE_OPENAI_API_KEY: z.string().optional(),
+  AZURE_OPENAI_API_INSTANCE_NAME: z.string().optional(),
+  AZURE_OPENAI_API_DEPLOYMENT_NAME: z.string().optional(),
+  AZURE_OPENAI_API_VERSION: z.string().optional(),
+
   // LLM Provider Configuration
-  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'google']).optional().default('openai'),
+  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'google', 'azure-openai']).optional().default('openai'),
   LLM_MODEL_NAME: z.string().optional(),
 
   // Optional: Server Port
@@ -70,6 +76,12 @@ export const config = {
   google: {
     apiKey: parsedConfig.GOOGLE_API_KEY
   },
+  azureOpenAI: {
+    apiKey: parsedConfig.AZURE_OPENAI_API_KEY,
+    instanceName: parsedConfig.AZURE_OPENAI_API_INSTANCE_NAME,
+    deploymentName: parsedConfig.AZURE_OPENAI_API_DEPLOYMENT_NAME,
+    apiVersion: parsedConfig.AZURE_OPENAI_API_VERSION
+  },
   llm: {
     provider: parsedConfig.LLM_PROVIDER,
     modelName: parsedConfig.LLM_MODEL_NAME
@@ -88,6 +100,7 @@ export function maskSensitiveConfig(config: typeof parsedConfig) {
     OPENAI_API_KEY: config.OPENAI_API_KEY ? config.OPENAI_API_KEY.slice(0, 5) + '****' : undefined,
     ANTHROPIC_API_KEY: config.ANTHROPIC_API_KEY ? config.ANTHROPIC_API_KEY.slice(0, 5) + '****' : undefined,
     GOOGLE_API_KEY: config.GOOGLE_API_KEY ? config.GOOGLE_API_KEY.slice(0, 5) + '****' : undefined,
+    AZURE_OPENAI_API_KEY: config.AZURE_OPENAI_API_KEY ? config.AZURE_OPENAI_API_KEY.slice(0, 5) + '****' : undefined,
   };
 }
 
