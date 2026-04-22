@@ -43,7 +43,7 @@ const configSchema = z.object({
 });
 
 // Validate and parse the environment variables
-let parsedConfig: { TWILIO_ACCOUNT_SID: string; TWILIO_AUTH_TOKEN: string; TWILIO_WORKFLOW_SID: string; TWILIO_PHONE_NUMBER?: string | undefined; WELCOME_GREETING?: string | undefined; PORT: string; NGROK_DOMAIN?: string | undefined; SPEECH_KEY?: string | undefined; SPEECH_REGION?: string | undefined; OPENAI_API_KEY?: string | undefined; ANTHROPIC_API_KEY?: string | undefined; GOOGLE_API_KEY?: string | undefined; LLM_PROVIDER: "openai" | "anthropic" | "google"; LLM_MODEL_NAME?: string | undefined; };
+let parsedConfig: { TWILIO_ACCOUNT_SID: string; TWILIO_AUTH_TOKEN: string; TWILIO_WORKFLOW_SID: string; TWILIO_PHONE_NUMBER?: string | undefined; WELCOME_GREETING?: string | undefined; PORT: string; NGROK_DOMAIN?: string | undefined; OPENAI_API_KEY?: string | undefined; ANTHROPIC_API_KEY?: string | undefined; GOOGLE_API_KEY?: string | undefined; AZURE_OPENAI_API_KEY?: string | undefined; AZURE_OPENAI_API_INSTANCE_NAME?: string | undefined; AZURE_OPENAI_API_DEPLOYMENT_NAME?: string | undefined; AZURE_OPENAI_API_VERSION?: string | undefined; LLM_PROVIDER: "openai" | "anthropic" | "google" | "azure-openai"; LLM_MODEL_NAME?: string | undefined; };
 
 try {
   parsedConfig = configSchema.parse(process.env);
