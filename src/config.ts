@@ -18,11 +18,7 @@ const configSchema = z.object({
 
   // Conversation Relay Welcome Greeting
   WELCOME_GREETING: z.string().optional(),
-  
-  // Speech Service Configuration
-  SPEECH_KEY: z.string().optional(),
-  SPEECH_REGION: z.string().optional(),
-  
+
   // OpenAI Configuration
   OPENAI_API_KEY: z.string().optional(),
 
@@ -64,10 +60,6 @@ export const config = {
   },
   ngrok: {
     domain: parsedConfig.NGROK_DOMAIN
-  },
-  speech: {
-    key: parsedConfig.SPEECH_KEY,
-    region: parsedConfig.SPEECH_REGION
   },
   openai: {
     apiKey: parsedConfig.OPENAI_API_KEY
